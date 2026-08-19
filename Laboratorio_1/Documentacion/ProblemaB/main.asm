@@ -26,15 +26,25 @@
 .cseg
 .org 0x00
 
-
-ldi num0, 0x3F
 ldi r16,0b00000000
 ldi r17,0b11111111
+
+ldi num0, 0b00111111
+ldi num1, 0b00000110
+ldi num2, 0b01011011
+ldi num3, 0b01001111
+ldi num4, 0b01100110
+ldi num5, 0b01101101
+ldi num6, 0b01111101
+ldi num7, 0b00000111
+ldi num8, 0b01111111
+ldi num9, 0b01101111
+
 
 out DDRD,r17 ; Pines 0 al 7 SALIDA
 out DDRB,r16 ; Pines 8 a 13 ENTRADA
 
-out PORTD,r16 ; Usé r16 en vez de r17 para que las salidas queden en 0 y no se me prenda el display al inicio
+out PORTD,num0 ; Usé num0 en vez de r17 para que el display muestre 0 siempre al inicio
 out PORTB,r16 ; Usé r16 para no activar el pull-up interno ya que le voy a conectar un botón con pull-down :)
 
 start:
@@ -50,4 +60,17 @@ start:
 	cpi r28, 0b00000100 ; Compara el valor de PINB con el valor esperado cuando el tercer botón está pulsado.
 	breq incrementar ; Si los valores anteriores son iguales salta a incrementar
     
+	rjmp start
+
+decrementar:
+	in r29, PIND ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
+
+	rjmp start
+
+reiniciar:
+	out PORTD, num0 ; Carga la secuencia que prende el 0 en PORTD
+    rjmp start
+
+incrementar:
+	in r29, PIND ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
 	rjmp start
