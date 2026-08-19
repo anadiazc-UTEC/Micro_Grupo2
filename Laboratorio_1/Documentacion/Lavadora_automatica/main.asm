@@ -9,6 +9,11 @@
 .include "m328pdef.inc"
 .org 0x00
 
+;Inicializo el pin 8 como entrada
+cbi DDRB, PINB0
+cbi PORTB, PINB0
+
+;inicializo el estado en "Espera"
 ldi r16, 0x00
 
 start:
@@ -32,6 +37,10 @@ start:
 	rjmp start
 
 espera:
+	;Valido si el pin 8 recibe entrada. si la recibe, saltea el bucle
+	sbis PINB, PINB0
+	rjmp espera
+
 	ldi r16, 0x01
 	rjmp fin_if
 
