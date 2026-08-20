@@ -49,8 +49,8 @@ out PORTD, r31
 ;inicializar puertos B del 0 al 4 como salidas
 ldi r31, 0b00011111
 out DDRB, r31
-;inicializo los leds apagados
-ldi r31, 0x00
+;inicializo los leds apagados salvo el led de carga ligera (default)
+ldi r31, (1<<PINB2)
 out PORTB, r31
 
 ;declaro las variables para usar nombres mas amigables
@@ -61,10 +61,10 @@ out PORTB, r31
 ldi estado, 0x00
 
 ;inicializo la carga en "Ligera"
-ldi r17, 0x00
+ldi carga, 0x00
 
 start:
-	
+
     cpi estado, 0x00
 	breq espera
 
@@ -123,17 +123,51 @@ validar_carga:
 	inc carga
 
 	cpi carga, 0x03
-	brlo espera_carga
+	brlo actualizar_carga
 	;en caso de que la carga sea mayor a 0x02 (pesada) resetea el valor
 	ldi carga, 0x00
 
-	rjmp retornar
+	rjmp actualizar_carga
 
 retornar: ret
 
+actualizar_carga:
+	;Leemos como estan los pines B, donde se encuentran los pines de carga
+	in r31, PORTB
+	;seteamos los pines 10, 11 y 12 (B2, B3, B4) en 0
+	andi r31, 0b11100011 ;al usar and, los bits en 1 (1*1) se quedan en 1 y los bits en 0 (0*1) se quedan en 0.
+
+	;Evaluamos que carga esta seleccionada para prender su led
+	cpi carga, 0x00
+	breq encender_ligera
+
+	cpi carga, 0x01
+	breq encender_media
+
+	cpi carga, 0x02
+	breq encender_pesada
+
+	rjmp finalizar_acutalizar_carga
+
 espera_carga:
-	;me quedo esperando hasta que el usuario suelte el boton
+	;Me quedo esperando hasta que el usuario suelte el boton
 	sbic PINC, PINC1
 	rjmp espera_carga
 
 	rjmp retornar
+
+encender_ligera:
+	ori r31, (1<<PINB2)
+	rjmp finalizar_acutalizar_carga
+
+encender_media:
+	ori r31, (1<<PINB3)
+	rjmp finalizar_acutalizar_carga
+
+encender_pesada:
+	ori r31, (1<<PINB4)
+	rjmp finalizar_acutalizar_carga
+
+finalizar_acutalizar_carga:
+	out PORTB, r31
+	rjmp espera_carga
