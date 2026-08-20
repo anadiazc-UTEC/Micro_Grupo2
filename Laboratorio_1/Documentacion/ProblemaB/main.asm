@@ -63,14 +63,168 @@ start:
 	rjmp start
 
 decrementar:
+
 	in r29, PIND ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
+
+	cp r29, num0 ; Compara el valor de r29 con el valor de 0
+	breq cero_d ; Si los valores anteriores son iguales salta a cero_d
+
+	cp r29, num1 ; Compara el valor de r29 con el valor de 1
+	breq uno_d ; Si los valores anteriores son iguales salta a uno_d
+
+	cp r29, num2 ; Compara el valor de r29 con el valor de 2
+	breq dos_d ; Si los valores anteriores son iguales salta a dos_d
+
+	cp r29, num3 ; Compara el valor de r29 con el valor de 3
+	breq tres_d ; Si los valores anteriores son iguales salta a tres_d
+
+	cp r29, num4 ; Compara el valor de r29 con el valor de 4
+	breq cuatro_d ; Si los valores anteriores son iguales salta a cuatro_d
+	 
+	cp r29, num5 ; Compara el valor de r29 con el valor de 5
+	breq cinco_d ; Si los valores anteriores son iguales salta a cinco_d
+
+	cp r29, num6 ; Compara el valor de r29 con el valor de 6
+	breq seis_d ; Si los valores anteriores son iguales salta a seis_d
+
+	cp r29, num7 ; Compara el valor de r29 con el valor de 7
+	breq siete_d ; Si los valores anteriores son iguales salta a siete_d
+
+	cp r29, num8 ; Compara el valor de r29 con el valor de 8
+	breq ocho_d ; Si los valores anteriores son iguales salta a ocho_d
+
+	cp r29, num9 ; Compara el valor de r29 con el valor de 9
+	breq nueve_d ; Si los valores anteriores son iguales salta a nueve_d
 
 	rjmp start
 
+	
 reiniciar:
 	out PORTD, num0 ; Carga la secuencia que prende el 0 en PORTD
+
     rjmp start
 
 incrementar:
+
 	in r29, PIND ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
+
+	cp r29, num0 ; Compara el valor de r29 con el valor de 0
+	breq cero_i ; Si los valores anteriores son iguales salta a cero_i
+
+	cp r29, num1 ; Compara el valor de r29 con el valor de 1
+	breq uno_i ; Si los valores anteriores son iguales salta a uno_i
+
+	cp r29, num2 ; Compara el valor de r29 con el valor de 2
+	breq dos_i ; Si los valores anteriores son iguales salta a dos_i
+
+	cp r29, num3 ; Compara el valor de r29 con el valor de 3
+	breq tres_i ; Si los valores anteriores son iguales salta a tres_i
+
+	cp r29, num4 ; Compara el valor de r29 con el valor de 4
+	breq cuatro_i ; Si los valores anteriores son iguales salta a cuatro_i
+	 
+	cp r29, num5 ; Compara el valor de r29 con el valor de 5
+	breq cinco_i ; Si los valores anteriores son iguales salta a cinco_i
+
+	cp r29, num6 ; Compara el valor de r29 con el valor de 6
+	breq seis_i ; Si los valores anteriores son iguales salta a seis_i
+
+	cp r29, num7 ; Compara el valor de r29 con el valor de 7
+	breq siete_i ; Si los valores anteriores son iguales salta a siete_i
+
+	cp r29, num8 ; Compara el valor de r29 con el valor de 8
+	breq ocho_i ; Si los valores anteriores son iguales salta a ocho_i
+
+	cp r29, num9 ; Compara el valor de r29 con el valor de 9
+	breq nueve_i ; Si los valores anteriores son iguales salta a nueve_i
+
 	rjmp start
+
+; Funciones necesarias para decrementar e incrementar los valores del display (_d decrementar, _i incrementar)
+; Carga el valor anterior o posterior al establecido.
+
+cero_d:
+	out PORTD,num0
+	rjmp start
+
+cero_i:
+	out PORTD, num1
+	rjmp start
+
+uno_d:
+	out PORTD,num0
+	rjmp start
+
+uno_i:
+	out PORTD, num2
+	rjmp start
+
+dos_d:
+	out PORTD,num1
+	rjmp start
+
+dos_i:
+	out PORTD, num3
+	rjmp start
+
+tres_d:
+	out PORTD,num2
+	rjmp start
+
+tres_i:
+	out PORTD, num4
+	rjmp start
+
+cuatro_d:
+	out PORTD,num3
+	rjmp start
+
+cuatro_i:
+	out PORTD, num5
+	rjmp start
+
+cinco_d:
+	out PORTD,num4
+	rjmp start
+
+cinco_i:
+	out PORTD, num6
+	rjmp start
+
+seis_d:
+	out PORTD,num5
+	rjmp start
+
+seis_i:
+	out PORTD, num7
+	rjmp start
+
+siete_d:
+	out PORTD,num6
+	rjmp start
+
+siete_i:
+	out PORTD, num8
+	rjmp start
+
+ocho_d:
+	out PORTD,num7
+	rjmp start
+
+ocho_i:
+	out PORTD, num9
+	rjmp start
+
+nueve_d:
+	out PORTD, num8
+	rjmp start
+
+nueve_i:
+	out PORTD, num9
+	rjmp start
+
+esperar:
+	in r28, PINB ; Lee el valor de PINB (Donde se conectan los botones) y lo guarda en el registro 28
+	andi r28, 0b00000111 ; Multiplica el valor por 0, exceptuando los valores que nos interesan (Los 3 puertos de los botones), para poder asi quedarnos solamente los valor que nos interesan. Se guarda en r28
+	brne esperar ; Si el valor anterior no es 0 sigue repitiendo el bucle
+	rjmp start ; Vuelve a start cuando es 0
