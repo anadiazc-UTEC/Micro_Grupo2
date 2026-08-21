@@ -64,7 +64,7 @@ start:
 
 decrementar:
 
-	in r29, PIND ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
+	in r29, PORTD ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
 
 	cp r29, num0 ; Compara el valor de r29 con el valor de 0
 	breq cero_d ; Si los valores anteriores son iguales salta a cero_d
@@ -96,17 +96,17 @@ decrementar:
 	cp r29, num9 ; Compara el valor de r29 con el valor de 9
 	breq nueve_d ; Si los valores anteriores son iguales salta a nueve_d
 
-	rjmp start
+	rjmp esperar
 
 	
 reiniciar:
 	out PORTD, num0 ; Carga la secuencia que prende el 0 en PORTD
 
-    rjmp start
+    rjmp esperar
 
 incrementar:
 
-	in r29, PIND ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
+	in r29, PORTD ; Lee el valor de PIND (Pines de salida que prenden el display) y lo guarda en r29
 
 	cp r29, num0 ; Compara el valor de r29 con el valor de 0
 	breq cero_i ; Si los valores anteriores son iguales salta a cero_i
@@ -138,93 +138,104 @@ incrementar:
 	cp r29, num9 ; Compara el valor de r29 con el valor de 9
 	breq nueve_i ; Si los valores anteriores son iguales salta a nueve_i
 
-	rjmp start
+	rjmp esperar
 
 ; Funciones necesarias para decrementar e incrementar los valores del display (_d decrementar, _i incrementar)
 ; Carga el valor anterior o posterior al establecido.
 
 cero_d:
 	out PORTD,num0
-	rjmp start
+	rjmp esperar
 
 cero_i:
 	out PORTD, num1
-	rjmp start
+	rjmp esperar
 
 uno_d:
 	out PORTD,num0
-	rjmp start
+	rjmp esperar
 
 uno_i:
 	out PORTD, num2
-	rjmp start
+	rjmp esperar
 
 dos_d:
 	out PORTD,num1
-	rjmp start
+	rjmp esperar
 
 dos_i:
 	out PORTD, num3
-	rjmp start
+	rjmp esperar
 
 tres_d:
 	out PORTD,num2
-	rjmp start
+	rjmp esperar
 
 tres_i:
 	out PORTD, num4
-	rjmp start
+	rjmp esperar
 
 cuatro_d:
 	out PORTD,num3
-	rjmp start
+	rjmp esperar
 
 cuatro_i:
 	out PORTD, num5
-	rjmp start
+	rjmp esperar
 
 cinco_d:
 	out PORTD,num4
-	rjmp start
+	rjmp esperar
 
 cinco_i:
 	out PORTD, num6
-	rjmp start
+	rjmp esperar
 
 seis_d:
 	out PORTD,num5
-	rjmp start
+	rjmp esperar
 
 seis_i:
 	out PORTD, num7
-	rjmp start
+	rjmp esperar
 
 siete_d:
 	out PORTD,num6
-	rjmp start
+	rjmp esperar
 
 siete_i:
 	out PORTD, num8
-	rjmp start
+	rjmp esperar
 
 ocho_d:
 	out PORTD,num7
-	rjmp start
+	rjmp esperar
 
 ocho_i:
 	out PORTD, num9
-	rjmp start
+	rjmp esperar
 
 nueve_d:
 	out PORTD, num8
-	rjmp start
+	rjmp esperar
 
 nueve_i:
 	out PORTD, num9
-	rjmp start
-
+	rjmp esperar
+	
 esperar:
-	in r28, PINB ; Lee el valor de PINB (Donde se conectan los botones) y lo guarda en el registro 28
+	ldi r16, 250
+delay_ext:
+	ldi r17, 255 ; Carga el valor 255 en r17
+delay_int:
+	dec r17 ; Decrementa r17
+	brne delay_int ; vuelve al bucle
+
+	dec r16 ; Decrementa r16
+	brne delay_ext ; Vuelve al bucle
+
+	; Verifica si el botón sigue presionado
+	in r28, PINB ; Lee el valor de PINB (Donde se conectan los botones) y lo guarda en r28
 	andi r28, 0b00000111 ; Multiplica el valor por 0, exceptuando los valores que nos interesan (Los 3 puertos de los botones), para poder asi quedarnos solamente los valor que nos interesan. Se guarda en r28
-	brne esperar ; Si el valor anterior no es 0 sigue repitiendo el bucle
-	rjmp start ; Vuelve a start cuando es 0
+	brne esperar ; Si sigue presionado repite la espera
+	rjmp start   ; Va a start cuando el botón se suelta
