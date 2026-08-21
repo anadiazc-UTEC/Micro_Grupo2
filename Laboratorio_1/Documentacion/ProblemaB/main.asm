@@ -224,7 +224,7 @@ nueve_i:
 	rjmp esperar
 	
 esperar:
-	ldi r16, 250
+	ldi r16, 250 ; Carga el valor 250 en r16
 delay_ext:
 	ldi r17, 255 ; Carga el valor 255 en r17
 delay_int:
