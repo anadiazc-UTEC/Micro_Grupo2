@@ -42,8 +42,8 @@ out PORTC, r31
 ;inicializar puertos D del 2 al 7 como salidas (menos el 3, ese no lo vamos a configurar todavia)
 ldi r31, 0b11110100
 out DDRD, r31
-;inicializo los leds apagados
-ldi r31, 0x00
+;inicializo los leds apagados salvo el led de espera (default)
+ldi r31, (1<<PIND5)
 out PORTD, r31
 
 ;inicializar puertos B del 0 al 4 como salidas
@@ -95,7 +95,15 @@ espera:
 	rjmp fin_if
 
 lavado:
-	;Valido si 
+	
+	;encendemos el led de lavado, apagando el de espera
+	in r31, PORTD
+	ori r31, (1 << PIND6)
+	cbr r31, (1 << PIND5)
+	out PORTD, r31
+	rcall validar_agua
+
+	;Desde ahora, debo validar que la puerta este cerrada para mover el tambor
 	ldi estado, 0x02
 	rjmp fin_if
 
@@ -170,4 +178,66 @@ encender_pesada:
 
 finalizar_acutalizar_carga:
 	out PORTB, r31
+
+	cpi estado, 0x00	;espera
 	rjmp espera_carga
+
+	cpi estado, 0x01	;lavado
+	rjmp retornar
+
+validar_agua:
+	;Antes de mover el motor, el tambor tiene que estar lleno de agua (sensor de agua = 1)
+	;Una vez se llena, ya no lo valido, ya que el agua puede variar por el movimiento
+	sbis PINC, PINC3
+	rjmp agua_no_llena
+
+	ret
+
+
+agua_no_llena:
+	;Si el sensor no se activa, hacemos parpadear la luz de carga
+	in r31, PORTB
+	andi r31, 0b11100011
+	out PORTB, r31
+	rcall delay_500ms
+
+	rcall actualizar_carga
+	rcall delay_500ms
+
+	rjmp validar_agua
+
+delay_500ms:
+	;Para 500ms necesitamos 16 MHz * 500 ms = 8.000.000 de ciclos
+	;Ciclos1 = 3*N1 - 1 (max 764 ciclos)
+	;Ciclos2 = N2*(3*N1 + 3) - 1 (max 195.839 ciclos)
+	;Ciclos3 = N3*(N2*(3*N1 + 3) + 3) - 1 (max 49.939.964 ciclos)
+
+	;factorizando, (Ciclos3 + 1)/3 = N3*(N2*(N1 + 1) + 1)
+
+	;K = (8.000.000 + 1) / 3 = 2.666.667
+	;M = N2 * (N1 + 1) + 1
+	;K = N3 * M
+	;M = K / N3 (tal que M y N3 sean redondos y maximizar N3 hasta 255)
+	;N3 = 201 -> M = 2.666.667 / 201 = 13.267
+	;M = N2 * (N1 + 1) + 1 -> (M - 1) = N2 * (N1 + 1)
+	;13.266 / N2 = N1 + 1 (tal que N2 y N1 sean redondos y maximizar N2)
+	;N2 = 201 -> 13.266 / 201 = 66 
+	;N1 + 1 = 66 -> N1 = 66 - 1 = 65
+
+	ldi r20, 201
+l3:
+	ldi r21, 201
+l2:
+	ldi r22, 65
+l1:
+	
+	dec r22
+	brne l1
+
+	dec r21
+	brne l2	
+
+	dec r20
+	brne l3
+	
+	ret
