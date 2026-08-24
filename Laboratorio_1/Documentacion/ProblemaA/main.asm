@@ -134,6 +134,18 @@ centrifugado:
 	rjmp fin_if
 
 secado:
+
+	;encendemos el led de secado, apagando el de centrifugado
+	in r31, PORTD
+	cbr r31, (1 << PIND7)
+	out PORTD, r31
+
+	in r31, PORTB
+	ori r31, (1 << PINB0)
+	out PORTD, r31
+	
+	rcall ejecutar_secado
+
 	ldi estado, 0x04
 	rjmp fin_if
 
@@ -360,6 +372,75 @@ girar_izquierda_alta:
 	andi r31, 0b11101011
 	out PORTD, r31
 
+	ret
+
+ejecutar_secado:
+
+	mov r24, giro_secado
+	rcall girar_tambor_secado_derecha
+	mov giro_secado, r24
+
+	mov r24, espera_secado
+	rcall esperar_secado
+	mov espera_secado, r24
+
+	mov r24, giro_secado
+	rcall girar_tambor_secado_izquierda
+	mov giro_secado, r24
+
+	ret
+
+girar_tambor_secado_derecha:
+
+	;Gira el tambor por 1 segundo
+	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
+	rcall girar_derecha_media
+
+	dec giro_secado
+	brne girar_tambor_secado_derecha
+
+	ret
+
+girar_tambor_secado_izquierda:
+
+	;Gira el tambor por 1 segundo
+	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
+	rcall girar_izquierda_media
+
+	dec giro_secado
+	brne girar_tambor_secado_izquierda
+
+	ret
+
+girar_derecha_media:
+	
+	;Debo validar que la puerta este cerrada para mover el tambor
+	rcall validar_puerta
+
+	;prende el motor por 100ms y luego lo apaga por otros 100ms
+
+	in r31, PORTD
+	ori r31, 0b00010000
+	out PORTD, r31
+	rcall delay_100ms
+
+	andi r31, 0b11101011
+	out PORTD, r31
+	rcall delay_100ms
+	
+	dec r27
+	brne girar_derecha_media
+
+	ret
+
+esperar_secado:
+	
+	rcall delay_500ms
+	rcall delay_500ms
+
+	dec espera_secado
+	brne esperar_secado
+	
 	ret
 
 delay_500ms:
