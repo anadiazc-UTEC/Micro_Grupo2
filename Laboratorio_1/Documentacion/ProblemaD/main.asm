@@ -64,6 +64,9 @@ start:
 
 
 clear:
+    clr r16
+    out PORTB, r16
+    rjmp start
 	
 	
 AmenosB:
@@ -73,22 +76,29 @@ AmenosB:
 
 AmasB:
 	add A,B
+	out PORTB, A
 	rjmp start
 
 AxorB:
-	
+	eor A,B
+	out PORTB, A
+	rjmp start
 AandB:
 	and A,B
+	out PORTB, A
 	rjmp start
 
 AorB:
 	or A,B
+	out PORTB, A
 	rjmp start
 
 SHLAmenorque1:
 	lsl A
+	out PORTB, A
 	rjmp start
 
 INCAmas1:
-	andi A,1
+	inc A
+	out PORTB, A
 	rjmp start
