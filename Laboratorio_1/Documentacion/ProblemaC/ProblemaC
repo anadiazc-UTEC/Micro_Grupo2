@@ -1,10 +1,3 @@
-;
-; AssemblerApplication1.asm
-;
-; Created: 21/08/2026 11:27:19
-; Author : marti
-
-
 .include "m328Pdef.inc"  
 
 .def estado = r16        ; Registro para guardar la secuencia actual (1 a 8)
@@ -13,10 +6,8 @@
 .def delay2 = r21
 .def delay3 = r22
 
-
 .org 0x0000
-    rjmp INICIO          ; Vector de Reset, sirve para  saltar a la configuracion inicial
-
+    rjmp INICIO          ; Vector de Reset, sirve para saltar a la configuracion inicial
 
 INICIO:
     ldi temp, high(RAMEND)
@@ -31,9 +22,9 @@ INICIO:
     out PORTD, temp
 
     ;Configurar PORTB como ENTRADA 
-										; PB0 = Boton 1 (Avanzar)
-										; PB1 = Boton 2 (Retroceder)
-										; PB2 = Boton 3 (Reset)
+                                        ; PB0 = Boton 1 (Avanzar)
+                                        ; PB1 = Boton 2 (Retroceder)
+                                        ; PB2 = Boton 3 (Reset)
     ldi temp, 0x00       ; 0x00 = 0b00000000 (Todos los pines como entrada)
     out DDRB, temp
     ldi temp, 0x07       ; 0x07 = 0b00000111 (Activar resistencias Pull-up en PB0, PB1, PB2)
@@ -42,15 +33,32 @@ INICIO:
     ; 4. Inicializar Estado
     ldi estado, 1        ; Arrancamos en la Secuencia 1
 
-
 DESPACHADOR:
     cpi estado, 1        ; pregunta si el estado actual es 1
     breq SEC_1           ; Si es igual salta a SEC_1
     
-   
+    cpi estado, 2        
+    breq SEC_2           
+
+    cpi estado, 3 
+    breq SEC_3
+  
+    cpi estado, 4
+    breq SEC_4      
+	
+	cpi estado, 5        ; pregunta si el estado actual es 1
+    breq SEC_5           ; Si es igual salta a SEC_1
+    
+    cpi estado, 6        
+    breq SEC_6           
+
+    cpi estado, 7 
+    breq SEC_7
+  
+    cpi estado, 8
+    breq SEC_8        
 
     rjmp DESPACHADOR     ; Falla de seguridad: si no coincide nada, vuelve a leer
-
 
 ; SECUENCIAS DE LEDs
 
@@ -65,19 +73,87 @@ SEC_1:
     rcall RETARDO_BOTONES
 
     rjmp SEC_1           ; Repite el patron
+    
+SEC_2:  ;PRENDE LOS LEDS DE FORMA INTERCALADA
+    ; Encender pares
+    ldi temp, 0xAA       ; Carga 0xAA en el registro temporal que equivale a 10101010 en binario
+    out PORTD, temp      ; Envía el patrón a los 8 LEDs
+    rcall RETARDO_BOTONES ; Hace una pausa para verificar si algun boton fue presionado
 
+    ;Encender impares
+    ldi temp, 0x55       ; Carga 0x55 en el registro temporal que equivale a 01010101
+    out PORTD, temp      ; Envía el nuevo patrón a los 8 LEDs
+    rcall RETARDO_BOTONES ; Vuelve a hacer pausa y verificar botones
+    
+    rjmp SEC_2           ;Repite el patron
+
+SEC_3:
+    ldi temp, 0x33
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+
+    ldi temp, 0xCC
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+
+    rjmp SEC_3
+
+SEC_4:
+    ldi temp, 0x01
+SEC_4_BUCLE:
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+    lsl temp
+    cpi temp, 0x00       ; Si es cero, reinicia la secuencia desde el LED 1
+    breq SEC_4
+    rjmp SEC_4_BUCLE
+SEC_5:
+    ldi temp, 0x80
+SEC_5_BUCLE:
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+    lsr temp
+    cpi temp, 0x00
+    breq SEC_5
+    rjmp SEC_5_BUCLE
+
+SEC_6:
+    ldi temp, 0x03
+SEC_6_BUCLE:
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+    lsl temp
+    cpi temp, 0x00
+    breq SEC_6
+    rjmp SEC_6_BUCLE
+
+SEC_7:
+    ldi temp, 0xC0
+SEC_7_BUCLE:
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+    lsr temp
+    cpi temp, 0x00
+    breq SEC_7
+    rjmp SEC_7_BUCLE
+
+SEC_8:
+    ldi temp, 0x0F
+SEC_8_BUCLE:
+    out PORTD, temp
+    rcall RETARDO_BOTONES
+    swap temp
+    rjmp SEC_8_BUCLE
 
 ; SUBRUTINA: RETARDO Y LECTURA DE BOTONES
 RETARDO_BOTONES:
-						
-						
-    ldi delay3, 15			 
+                        
+    ldi delay3, 15             
 Bucle_Externo:
     ldi delay2, 255
 Bucle_Medio:
     ldi delay1, 255
 Bucle_Interno:
-    
     
     ;si el pin es 0 , el boton esta presionado.
     sbis PINB, 0         ; SBIS: Salta la siguiente instruccion si el bit 0 de PINB es 1
@@ -89,7 +165,7 @@ Bucle_Interno:
     sbis PINB, 2         ; Revisa Boton 3
     rjmp BTN_RESET
 
-    ; --- CONTINUA EL RETARDO ---
+    ;CONTINUA EL RETARDO
     dec delay1
     brne Bucle_Interno
     dec delay2
@@ -97,8 +173,7 @@ Bucle_Interno:
     dec delay3
     brne Bucle_Externo
 
-    ret                 
-
+    ret                  
 
 BTN_AVANZAR:
     ; Esperar a que el usuario suelte el boton 
@@ -116,9 +191,9 @@ BTN_RETROCEDER:
     rjmp BTN_RETROCEDER
     
     dec estado           ; Resta 1 al estado
-    cpi estado, 0        ; Lleg a 0?
+    cpi estado, 0        ; Pregunta si llego a cero
     brne APLICAR_CAMBIO
-    ldi estado, 8        ; Si llego a 0, fuerza el salto a 8 (Wrap-around)
+    ldi estado, 8        ; Si llego a cero, fuerza el salto a 8 
     rjmp APLICAR_CAMBIO
 
 BTN_RESET:
@@ -127,10 +202,11 @@ BTN_RESET:
     ldi estado, 1        ; Fuerza el estado a 1
     rjmp APLICAR_CAMBIO
 
-APLICAR_CAMBIO:
+
+   APLICAR_CAMBIO:
+    ; Reiniciar el Stack Pointer para limpiar la memoria basura
     ldi temp, high(RAMEND)
     out SPH, temp
     ldi temp, low(RAMEND)
     out SPL, temp
-
-    rjmp DESPACHADOR     ; Vuelve al menu principal para ejecutar la nueva secuencia
+	rjmp DESPACHADOR    ; Vuelve al menu principal para ejecutar la nueva secuencia
