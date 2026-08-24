@@ -56,12 +56,22 @@ out PORTB, r31
 ;declaro las variables para usar nombres mas amigables
 .def estado	= r16
 .def carga	= r17
+.def giro_lavado		= r19
+.def espera_lavado		= r20
+.def giro_centrifugado	= r21
+.def giro_secado		= r22
+.def espera_secado		= r23
 
 ;inicializo el estado en "Espera"
 ldi estado, 0x00
 
 ;inicializo la carga en "Ligera"
 ldi carga, 0x00
+ldi giro_lavado, 0x02
+ldi espera_lavado, 0x01
+ldi giro_centrifugado, 0x0F
+ldi giro_secado, 0x05
+ldi espera_secado, 0x03
 
 start:
 
@@ -102,8 +112,10 @@ lavado:
 	cbr r31, (1 << PIND5)
 	out PORTD, r31
 	rcall validar_agua
+	
+	ldi r18, 5
+	rcall ejecutar_lavado
 
-	;Desde ahora, debo validar que la puerta este cerrada para mover el tambor
 	ldi estado, 0x02
 	rjmp fin_if
 
@@ -158,6 +170,7 @@ actualizar_carga:
 	rjmp finalizar_acutalizar_carga
 
 espera_carga:
+	rcall delay_12ms
 	;Me quedo esperando hasta que el usuario suelte el boton
 	sbic PINC, PINC1
 	rjmp espera_carga
@@ -165,25 +178,41 @@ espera_carga:
 	rjmp retornar
 
 encender_ligera:
+	
 	ori r31, (1<<PINB2)
+	ldi giro_lavado, 0x02
+	ldi espera_lavado, 0x01
+	ldi giro_centrifugado, 0x0F
+	ldi giro_secado, 0x05
+	ldi espera_secado, 0x03
 	rjmp finalizar_acutalizar_carga
 
 encender_media:
 	ori r31, (1<<PINB3)
+	ldi giro_lavado, 0x03
+	ldi espera_lavado, 0x02
+	ldi giro_centrifugado, 0x12
+	ldi giro_secado, 0x07
+	ldi espera_secado, 0x05
 	rjmp finalizar_acutalizar_carga
 
 encender_pesada:
 	ori r31, (1<<PINB4)
+	ldi giro_lavado, 0x04
+	ldi espera_lavado, 0x03
+	ldi giro_centrifugado, 0x15
+	ldi giro_secado, 0x09
+	ldi espera_secado, 0x07
 	rjmp finalizar_acutalizar_carga
 
 finalizar_acutalizar_carga:
 	out PORTB, r31
 
 	cpi estado, 0x00	;espera
-	rjmp espera_carga
+	breq espera_carga
 
 	cpi estado, 0x01	;lavado
-	rjmp retornar
+	breq retornar
 
 validar_agua:
 	;Antes de mover el motor, el tambor tiene que estar lleno de agua (sensor de agua = 1)
@@ -206,6 +235,85 @@ agua_no_llena:
 
 	rjmp validar_agua
 
+validar_puerta:
+	;Antes de mover el motor, la puerta tiene que estar cerrada (sensor de puerta = 1)
+	;Si no esta cerrada, parpadear luces motor
+	sbis PINC, PINC2
+	rjmp puerta_no_cerrada
+
+	ret
+
+puerta_no_cerrada:
+	;Si el sensor no se activa, hacemos parpadear las luces de motor
+	
+	in r31, PORTD
+	ori r31, 0b00010100
+	out PORTD, r31
+	rcall delay_500ms
+	
+	andi r31, 0b11101011
+	out PORTD, r31
+	rcall delay_500ms
+	
+	rjmp validar_puerta
+
+ejecutar_lavado:
+
+	mov r24, giro_lavado
+	rcall girar_tambor_lavado
+	mov giro_lavado, r24
+
+	mov r24, espera_lavado
+	rcall esperar_lavado
+	mov espera_lavado, r24
+
+	dec r18
+	brne ejecutar_lavado
+
+	ret
+
+girar_tambor_lavado:
+
+	;Gira el tambor por 1 segundo
+	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
+	rcall girar_izquierda_media
+
+	dec giro_lavado
+	brne girar_tambor_lavado
+
+	ret
+
+girar_izquierda_media:
+	
+	;Debo validar que la puerta este cerrada para mover el tambor
+	rcall validar_puerta
+
+	;prende el motor por 100ms y luego lo apaga por otros 100ms
+
+	in r31, PORTD
+	ori r31, 0b00000100
+	out PORTD, r31
+	rcall delay_100ms
+
+	andi r31, 0b11101011
+	out PORTD, r31
+	rcall delay_100ms
+	
+	dec r27
+	brne girar_izquierda_media
+
+	ret
+
+esperar_lavado:
+	
+	rcall delay_500ms
+	rcall delay_500ms
+
+	dec espera_lavado
+	brne esperar_lavado
+	
+	ret
+
 delay_500ms:
 	;Para 500ms necesitamos 16 MHz * 500 ms = 8.000.000 de ciclos
 	;Ciclos1 = 3*N1 - 1 (max 764 ciclos)
@@ -224,20 +332,77 @@ delay_500ms:
 	;N2 = 201 -> 13.266 / 201 = 66 
 	;N1 + 1 = 66 -> N1 = 66 - 1 = 65
 
-	ldi r20, 201
+	ldi r28, 201
 l3:
-	ldi r21, 201
+	ldi r29, 201
 l2:
-	ldi r22, 65
+	ldi r30, 65
 l1:
 	
-	dec r22
+	dec r30
 	brne l1
 
-	dec r21
+	dec r29
 	brne l2	
 
-	dec r20
+	dec r28
 	brne l3
+	
+	ret
+
+delay_100ms:
+	;Para 500ms necesitamos 16 MHz * 100 ms = 1.600.000 de ciclos
+
+	;K = (1.600.000 + 1) / 3 = 533.334
+	;M = N2 * (N1 + 1) + 1
+	;K = N3 * M
+	;M = K / N3 (tal que M y N3 sean redondos y maximizar N3 hasta 255)
+	;N3 = 241 -> M = 533.334 / 241 = 2.213
+	;M = N2 * (N1 + 1) + 1 -> (M - 1) = N2 * (N1 + 1)
+	;2.213 / N2 = N1 + 1 (tal que N2 y N1 sean redondos y maximizar N2)
+	;N2 = 14 -> 2.213 / 14 = 158
+	;N1 + 1 = 158 -> N1 = 158 - 1 = 157
+
+	ldi r28, 157
+l6:
+	ldi r29, 14
+l5:
+	ldi r30, 241
+l4:
+	
+	dec r30
+	brne l4
+
+	dec r29
+	brne l5	
+
+	dec r28
+	brne l6
+	
+	ret
+
+
+delay_12ms:
+	;Para 100ms necesitamos 16 MHz * 12 ms = 192.000 de ciclos
+	
+	;factorizando, (Ciclos2 + 1) / 3 = N2(N1 + 1)
+
+	;K = (192.000 + 1) / 3 = 64.000
+	;M = N1 + 1
+	;K = N2 * M
+	;M = K / N2 (tal que M y N2 sean redondos y maximizar N2 hasta 255)
+	;N2 = 250 -> M = 64.000 / 250 = 256
+	;N1 + 1 = 256 -> N1 = 256 - 1 = 255
+
+	ldi r28, 255
+l8:
+	ldi r29, 250
+l7:
+	
+	dec r29
+	brne l7
+
+	dec r28
+	brne l8	
 	
 	ret
