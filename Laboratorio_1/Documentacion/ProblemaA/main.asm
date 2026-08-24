@@ -120,6 +120,16 @@ lavado:
 	rjmp fin_if
 
 centrifugado:
+
+	;encendemos el led de centrifugado, apagando el de lavado
+	in r31, PORTD
+	ori r31, (1 << PIND7)
+	cbr r31, (1 << PIND6)
+	out PORTD, r31
+	
+	rcall ejecutar_centrifugado
+
+
 	ldi estado, 0x03
 	rjmp fin_if
 
@@ -312,6 +322,44 @@ esperar_lavado:
 	dec espera_lavado
 	brne esperar_lavado
 	
+	ret
+	
+ejecutar_centrifugado:
+
+	mov r24, giro_centrifugado
+	rcall girar_tambor_centrifugado
+	mov giro_centrifugado, r24
+
+	ret
+
+girar_tambor_centrifugado:
+
+	;Gira el tambor por 1 segundo
+	ldi r27, 10 ;100ms * 10 = 1 segundo
+	rcall girar_izquierda_alta
+
+	dec giro_centrifugado
+	brne girar_tambor_centrifugado
+
+	ret
+
+girar_izquierda_alta:
+	
+	;Debo validar que la puerta este cerrada para mover el tambor
+	rcall validar_puerta
+
+	;prende el motor por 100ms la cantidad de veces que mande el llamador, simulando alta velocidad 
+	in r31, PORTD
+	ori r31, 0b00000100
+	out PORTD, r31
+	rcall delay_100ms
+	
+	dec r27
+	brne girar_izquierda_alta
+
+	andi r31, 0b11101011
+	out PORTD, r31
+
 	ret
 
 delay_500ms:
