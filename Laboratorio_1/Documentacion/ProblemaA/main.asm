@@ -95,6 +95,9 @@ start:
 
 espera:
 	
+	ldi r31, (1<<PIND5)
+	out PORTD, r31
+
 	rcall validar_carga
 
 	;Valido si el pin A0 (inicio) recibe entrada. si la recibe, saltea el bucle
@@ -142,7 +145,7 @@ secado:
 
 	in r31, PORTB
 	ori r31, (1 << PINB0)
-	out PORTD, r31
+	out PORTB, r31
 	
 	rcall ejecutar_secado
 
@@ -150,6 +153,26 @@ secado:
 	rjmp fin_if
 
 finalizado:
+	
+	;parpadeo 2 segundos
+	in r31, PORTB
+	cbr r31, (1 << PINB0)
+	ori r31, (1 << PINB1)
+	out PORTB, r31
+	rcall delay_500ms
+
+	cbr r31, (1 << PINB1)
+	out PORTB, r31
+	rcall delay_500ms
+
+	ori r31, (1 << PINB1)
+	out PORTB, r31
+	rcall delay_500ms
+
+	cbr r31, (1 << PINB1)
+	out PORTB, r31
+	rcall delay_500ms
+
 	ldi estado, 0x00
 	rjmp fin_if
 
@@ -297,7 +320,7 @@ ejecutar_lavado:
 girar_tambor_lavado:
 
 	;Gira el tambor por 1 segundo
-	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
+	ldi r27, 10 ;100ms * 10 = 1 segundo
 	rcall girar_izquierda_media
 
 	dec giro_lavado
@@ -309,20 +332,18 @@ girar_izquierda_media:
 	
 	;Debo validar que la puerta este cerrada para mover el tambor
 	rcall validar_puerta
-
-	;prende el motor por 100ms y luego lo apaga por otros 100ms
-
+	
+	;prende el motor por 100ms la cantidad de veces que mande el llamador, simulando alta media 
 	in r31, PORTD
 	ori r31, 0b00000100
-	out PORTD, r31
-	rcall delay_100ms
-
-	andi r31, 0b11101011
 	out PORTD, r31
 	rcall delay_100ms
 	
 	dec r27
 	brne girar_izquierda_media
+
+	andi r31, 0b11101011
+	out PORTD, r31
 
 	ret
 
@@ -347,7 +368,7 @@ ejecutar_centrifugado:
 girar_tambor_centrifugado:
 
 	;Gira el tambor por 1 segundo
-	ldi r27, 10 ;100ms * 10 = 1 segundo
+	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
 	rcall girar_izquierda_alta
 
 	dec giro_centrifugado
@@ -360,17 +381,19 @@ girar_izquierda_alta:
 	;Debo validar que la puerta este cerrada para mover el tambor
 	rcall validar_puerta
 
-	;prende el motor por 100ms la cantidad de veces que mande el llamador, simulando alta velocidad 
+	;prende el motor por 100ms y luego lo apaga por otros 100ms simulando velocidad alta
+
 	in r31, PORTD
 	ori r31, 0b00000100
 	out PORTD, r31
 	rcall delay_100ms
-	
-	dec r27
-	brne girar_izquierda_alta
 
 	andi r31, 0b11101011
 	out PORTD, r31
+	rcall delay_100ms
+
+	dec r27
+	brne girar_izquierda_alta
 
 	ret
 
@@ -393,7 +416,7 @@ ejecutar_secado:
 girar_tambor_secado_derecha:
 
 	;Gira el tambor por 1 segundo
-	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
+	ldi r27, 10 ;100ms * 10 = 1 segundo
 	rcall girar_derecha_media
 
 	dec giro_secado
@@ -404,7 +427,7 @@ girar_tambor_secado_derecha:
 girar_tambor_secado_izquierda:
 
 	;Gira el tambor por 1 segundo
-	ldi r27, 5 ;100ms * 2 * 5 = 1 segundo
+	ldi r27, 10 ;100ms * 10 = 1 segundo
 	rcall girar_izquierda_media
 
 	dec giro_secado
@@ -416,20 +439,18 @@ girar_derecha_media:
 	
 	;Debo validar que la puerta este cerrada para mover el tambor
 	rcall validar_puerta
-
-	;prende el motor por 100ms y luego lo apaga por otros 100ms
-
+	
+	;prende el motor por 100ms la cantidad de veces que mande el llamador, simulando alta media 
 	in r31, PORTD
 	ori r31, 0b00010000
-	out PORTD, r31
-	rcall delay_100ms
-
-	andi r31, 0b11101011
 	out PORTD, r31
 	rcall delay_100ms
 	
 	dec r27
 	brne girar_derecha_media
+
+	andi r31, 0b11101011
+	out PORTD, r31
 
 	ret
 
