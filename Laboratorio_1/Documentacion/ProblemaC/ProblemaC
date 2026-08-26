@@ -1,4 +1,7 @@
 
+
+
+
 .include "m328Pdef.inc"
 
 .def estado = r16      ; Secuencia actual (1-8)
@@ -6,12 +9,14 @@
 .def dly1   = r20      ; Contador retardo - bucle externo
 .def dly2   = r21      ; Contador retardo - bucle medio
 .def dly3   = r22      ; Contador retardo - bucle interno
-
+                                                                ;dly = delay    
 .org 0x0000
     rjmp INICIO
-
+                                                                    ;usé 3 buclés anidados para así poder lograr un retardo de 500ms
+                                                                    ;usé .def para asignar nombres a los registros
 
 INICIO:
+   ;inicializacion de la pila
     ; Stack Pointer (necesario para rcall/ret)
     ldi temp, high(RAMEND)
     out SPH, temp
@@ -19,21 +24,23 @@ INICIO:
     out SPL, temp
 
     ; PORTD como salida -> 8 LEDs
-    ldi temp, 0xFF
+    ldi temp, 0xFF ;Pone todo el registro en "unos"
     out DDRD, temp
-    ldi temp, 0x00
+    ldi temp, 0x00 ;Pone el registro en "ceros" 
     out PORTD, temp
 
     ; PB0, PB1, PB2 como entradas con pull-up botones
-    ldi temp, 0x00
+    ldi temp, 0x00  ;
     out DDRB, temp
-    ldi temp, 0x07
+    ldi temp, 0x07 ;
     out PORTB, temp
 
     ldi estado, 1       ; Secuencia inicial
 
 
 DESPACHADOR:
+    ;cpi = compare immediate , estamos comparando el numero guardado en el registro r16 con una constante
+    ;breq = branch if equal,  si el valor actual del estado es el mismo, salta a la subrutina, sino pasa a la siguiente instruccion
     cpi estado, 1
     breq SEC_1
    
@@ -58,17 +65,17 @@ DESPACHADOR:
     cpi estado, 8
     breq SEC_8
   
-    rjmp DESPACHADOR
+    rjmp DESPACHADOR     ;Esto es para evitar que no tenga un estado mayor a 8
 
 
 SEC_1:
     ldi temp, 0xFF
-    out PORTD, temp
+    out PORTD, temp ; envia el valor que se cargó en temp al puerto D
     rcall RETARDO
     ldi temp, 0x00
     out PORTD, temp
     rcall RETARDO
-    rjmp SEC_1
+    rjmp SEC_1  ;salto al incio de la secuencia para que quede en bucle
 
 SEC_2:
     ldi temp, 0xAA
@@ -99,8 +106,8 @@ SEC_4_BUCLE:
     rjmp SEC_4_BUCLE
 
 SEC_5:
-    ldi temp, 0x80
-SEC_5_BUCLE:
+    ldi temp, 0x80                                                      ;se ejecuta una sola vez por fuera del bucle
+SEC_5_BUCLE:                        ;se agrega para que podamos ver el patron de desplazamiento
     out PORTD, temp
     rcall RETARDO
     lsr temp
