@@ -3,6 +3,7 @@
 .def A = r17
 .def B = r18
 .def Seleccion = r19
+.def status = r20
 
 .cseg
 .org 0x00
@@ -10,7 +11,6 @@
 
 ldi r16, 0b00000000    
 out DDRD, r16 ; Pines 0 a 7 ENTRADAS A y B
-
 ldi r16, 0b00111000    
 out DDRC, r16 ; Pines A0 A1 y A2 ENTRADAS SELECTOR, A3 A4 y A5 SALIDAS BANDERAS 
 
@@ -64,41 +64,43 @@ start:
 
 
 clear:
-    clr r16
-    out PORTB, r16
-    rjmp start
+    clr A
+    rjmp enviarSalidas
 	
 	
 AmenosB:
 	sub A,B
-	out PORTB, A
-	rjmp start
+	rjmp enviarSalidas
 
 AmasB:
 	add A,B
-	out PORTB, A
-	rjmp start
+	rjmp enviarSalidas
 
 AxorB:
 	eor A,B
-	out PORTB, A
-	rjmp start
+	rjmp enviarSalidas
 AandB:
 	and A,B
-	out PORTB, A
-	rjmp start
+	rjmp enviarSalidas
 
 AorB:
 	or A,B
-	out PORTB, A
-	rjmp start
+	rjmp enviarSalidas
 
 SHLAmenorque1:
 	lsl A
-	out PORTB, A
-	rjmp start
+	rjmp enviarSalidas
 
 INCAmas1:
 	inc A
+	rjmp enviarSalidas
+
+enviarSalidas:
+	andi A, 0b00001111 ;mascara
 	out PORTB, A
+	rjmp calcularFlags
+
+calcularFlags:
+
 	rjmp start
+	

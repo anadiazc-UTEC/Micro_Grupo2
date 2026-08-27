@@ -16,12 +16,6 @@
                                                                     ;usé .def para asignar nombres a los registros
 
 INICIO:
-   ;inicializacion de la pila
-    ; Stack Pointer (necesario para rcall/ret)
-    ldi temp, high(RAMEND)
-    out SPH, temp
-    ldi temp, low(RAMEND)
-    out SPL, temp
 
     ; PORTD como salida -> 8 LEDs
     ldi temp, 0xFF ;Pone todo el registro en "unos"
@@ -29,10 +23,9 @@ INICIO:
     ldi temp, 0x00 ;Pone el registro en "ceros" 
     out PORTD, temp
 
-    ; PB0, PB1, PB2 como entradas con pull-up botones
+    ; PB0, PB1, PB2 como entradas con pull-down botones
     ldi temp, 0x00  ;
     out DDRB, temp
-    ldi temp, 0x07 ;
     out PORTB, temp
 
     ldi estado, 1       ; Secuencia inicial
@@ -151,15 +144,18 @@ RETARDO:
 RET_L3:
     ldi dly2, 201
 RET_L2:
-    sbis PINB, 0
-    rjmp BTN_AVANZAR
-    sbis PINB, 1
-    rjmp BTN_RETROCEDER
-    sbis PINB, 2
-    rjmp BTN_RESET
-
     ldi dly3, 65
 RET_L1:
+	
+	sbic PINB, 0
+	rjmp BTN_AVANZAR
+
+    sbic PINB, 1
+    rjmp BTN_RETROCEDER
+
+    sbic PINB, 2
+    rjmp BTN_RESET
+
     dec dly3
     brne RET_L1
 
@@ -174,7 +170,7 @@ RET_L1:
 ; ACCIONES DE BOTONES
 
 BTN_AVANZAR:
-    sbis PINB, 0            ; esperar a que se suelte el boton
+    sbic PINB, 0            ; esperar a que se suelte el boton
     rjmp BTN_AVANZAR
 
     inc estado
@@ -184,26 +180,37 @@ BTN_AVANZAR:
     rjmp APLICAR
 
 BTN_RETROCEDER:
-    sbis PINB, 1
+    sbic PINB, 1
     rjmp BTN_RETROCEDER
 
     dec estado
     cpi estado, 0
     brne APLICAR
     ldi estado, 8
+
     rjmp APLICAR
 
 BTN_RESET:
-    sbis PINB, 2
+    sbic PINB, 2
     rjmp BTN_RESET
 
     ldi estado, 1
     rjmp APLICAR
 
 APLICAR:
-    ; Se reinicia el Stack Pointer para descartar la direccion de retorno que quedo pendiente de RETARDO.
-    ldi temp, high(RAMEND)
-    out SPH, temp
-    ldi temp, low(RAMEND)
-    out SPL, temp
+	rcall delay_boton
     rjmp DESPACHADOR
+
+delay_boton: ;12ms
+	ldi dly1, 255
+l5:
+	ldi dly2, 250
+l4:
+	
+	dec dly2
+	brne l4
+
+	dec dly1
+	brne l5	
+	
+	ret
