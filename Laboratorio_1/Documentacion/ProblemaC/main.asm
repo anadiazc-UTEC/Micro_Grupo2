@@ -12,8 +12,8 @@
                                                                 ;dly = delay    
 .org 0x0000
     rjmp INICIO
-                                                                    ;usÃ© 3 buclÃ©s anidados para asÃ­ poder lograr un retardo de 500ms
-                                                                    ;usÃ© .def para asignar nombres a los registros
+                                                                    ;usé 3 buclés anidados para así poder lograr un retardo de 500ms
+                                                                    ;usé .def para asignar nombres a los registros
 
 INICIO:
 
@@ -63,7 +63,7 @@ DESPACHADOR:
 
 SEC_1:
     ldi temp, 0xFF
-    out PORTD, temp ; envia el valor que se cargÃ³ en temp al puerto D
+    out PORTD, temp ; envia el valor que se cargó en temp al puerto D
     rcall RETARDO
     ldi temp, 0x00
     out PORTD, temp
