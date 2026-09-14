@@ -1,14 +1,10 @@
 
-	
-; Segmento de codigo
 .def contador = r18
 .def constante = r19
+.def cantidadValores = r16
 
 .org 0x0000
 rjmp start
-
-ldi r18, 0x00
-ldi r19, 0x02
 
 configurar:
 	ldi r20, 255
@@ -25,30 +21,55 @@ esperar_inicio:
 	ret
 
 start:
-  ldi r16, HIGH(RAMEND)
+    ldi r16, HIGH(RAMEND)
 	out SPH, r16
 	ldi r16, LOW(RAMEND)
 	out SPL, r16
 	call configurar
 	call esperar_inicio
-	ldi r16, 0x01
-	rjmp start
+
+bucle_infinito:
+	call leer_derecho    
+	call leer_reves      
+	rjmp bucle_infinito
 
 guardar_codigos:
 	ldi r28, 0x00 ;LOW(0x0100)
 	ldi r29, 0x01 ;HIGH(0x0100)
+	ldi contador, 0x00
+	ldi constante, 0x02
 	rjmp bucle_guardar
 
 bucle_guardar:
-	ST Y+, r18
-	cpi r18, 0xfe
+	ST Y+, contador
+	cpi contador, 0xfe
 	breq fin_guardar
 
-	add r18, r19
+	add contador, constante
 	rjmp bucle_guardar
-	
 
 fin_guardar:
 	ret
 
+leer_derecho:
+	ldi r28, 0x00
+	ldi r29, 0x01
+	ldi cantidadValores, 128
+
+bucle_derecho:
+	ld r20, Y+
+	out PORTD, r20
+	dec cantidadValores
+	brne bucle_derecho
+	ret
+
+leer_reves:
+	ldi cantidadValores, 128
+
+bucle_reves:
+	ld r20, -Y
+    out PORTD, r20      
+    dec cantidadValores
+    brne bucle_reves
+	ret
 	
