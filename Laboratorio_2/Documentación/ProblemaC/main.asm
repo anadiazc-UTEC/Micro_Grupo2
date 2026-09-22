@@ -99,9 +99,8 @@ figura_triangulo:
 	rjmp loop_menu
 
 figura_circulo:
-	ldi r16, 0b00001000
-	out PORTD, r16
-
+	
+	rcall dibujar_circulo
 	rjmp loop_menu
 
 figura_pentagrama:
@@ -165,6 +164,125 @@ detener_movimiento:
 	cbi PORTD, BIT_DERECHA
 	ret
 
+pixel_abajo:
+	;un pixel para abajo
+	sbi PORTD, BIT_ABAJO
+	rcall delay_pixel
+	cbi PORTD, BIT_ABAJO
+	ret
+
+pixel_arriba:
+	;un pixel para arriba
+	sbi PORTD, BIT_ARRIBA
+	rcall delay_pixel
+	cbi PORTD, BIT_ARRIBA
+	ret
+
+pixel_izquierda:
+	;un pixel para la izquierda
+	sbi PORTD, BIT_IZQUIERDA
+	rcall delay_pixel
+	cbi PORTD, BIT_IZQUIERDA
+	ret
+
+pixel_derecha:
+	;un pixel para la derecha
+	sbi PORTD, BIT_DERECHA
+	rcall delay_pixel
+	cbi PORTD, BIT_DERECHA
+	ret
+
+
+dibujar_circulo:
+;circulo 14px diametro
+	rcall detener_movimiento
+	rcall bajar_solenoide
+
+	;primer cuarto
+	rcall pixel_derecha
+	rcall pixel_derecha
+
+	rcall pixel_abajo
+	
+	rcall pixel_derecha
+	rcall pixel_derecha
+
+	rcall pixel_abajo
+
+	rcall pixel_derecha
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+
+	;segundo cuarto
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+
+	rcall pixel_izquierda
+
+	rcall pixel_abajo
+	
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+
+	rcall pixel_abajo
+	
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+
+	;tercer cuarto
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+
+	rcall pixel_arriba
+	
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+
+	rcall pixel_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	;cuarto cuarto
+	rcall pixel_arriba
+	rcall pixel_arriba
+
+	rcall pixel_derecha
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+
+	rcall pixel_derecha
+
+	rcall pixel_arriba
+
+	rcall pixel_derecha
+	rcall pixel_derecha
+
+	rcall pixel_arriba
+
+	rcall pixel_derecha
+	rcall pixel_derecha
+	
+	rcall detener_movimiento
+	
+	rcall subir_solenoide
+
+	ret
+
 delay_100ms:
 	ldi r28, 157
 l6:
@@ -204,5 +322,24 @@ l1:
 
 	dec r28
 	brne l3
+	
+	ret
+
+delay_pixel:
+	;1px  = 1s
+	ldi r28, 201
+l9:
+	ldi r29, 169
+l8:
+	ldi r30, 156
+l7:
+	dec r30
+	brne l7
+
+	dec r29
+	brne l8
+
+	dec r28
+	brne l9
 	
 	ret
