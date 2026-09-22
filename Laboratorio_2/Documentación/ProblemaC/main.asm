@@ -167,7 +167,7 @@ pixel_izquierda:
 	rcall delay_pixel
 	cbi PORTD, BIT_IZQUIERDA
 	ret
-
+	
 pixel_derecha:
 	;un pixel para la derecha
 	sbi PORTD, BIT_DERECHA
@@ -175,21 +175,64 @@ pixel_derecha:
 	cbi PORTD, BIT_DERECHA
 	ret
 
+pixel_izquierda_arriba:
+	;un pixel para la izquierda arriba
+	sbi PORTD, BIT_IZQUIERDA
+	sbi PORTD, BIT_ARRIBA
+	rcall delay_pixel
+	cbi PORTD, BIT_IZQUIERDA
+	cbi PORTD, BIT_ARRIBA
+	ret
+
 dibujar_triangulo:
+	;triangulo rectangulo 8x15x17
+
 	rcall detener_movimiento
 	rcall bajar_solenoide
 
-	sbi PORTD, BIT_ABAJO
-	rcall delay_recta_triangulo
-	cbi PORTD, BIT_ABAJO
+	;primer cateto
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
 	
-	sbi PORTD, BIT_DERECHA
-	rcall delay_recta_triangulo
-	cbi PORTD, BIT_DERECHA
-	
-	sbi PORTD, BIT_IZQUIERDA
-	sbi PORTD, BIT_ARRIBA
-	rcall delay_recta_triangulo
+	;segundo cateto
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+
+	;hipotenusa
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
 
 	rcall detener_movimiento
 	rcall subir_solenoide
@@ -346,11 +389,6 @@ l4:
 	dec r28
 	brne l6
 	
-	ret
-
-delay_recta_triangulo:
-	rcall delay_2500ms
-	rcall delay_2500ms
 	ret
 
 
