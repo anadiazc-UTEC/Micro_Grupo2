@@ -197,7 +197,7 @@ dibujar_triangulo:
 	ret
 
 dibujar_circulo:
-	;circulo 14px diametro
+	;circulo 18px diametro
 	rcall detener_movimiento
 	rcall bajar_solenoide
 
@@ -213,7 +213,22 @@ dibujar_circulo:
 	rcall pixel_abajo
 
 	rcall pixel_derecha
+	rcall pixel_derecha
 	
+	rcall pixel_abajo
+	
+	rcall pixel_derecha
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_derecha
+
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_derecha
+
 	rcall pixel_abajo
 	rcall pixel_abajo
 
@@ -226,6 +241,16 @@ dibujar_circulo:
 	rcall pixel_abajo
 	rcall pixel_abajo
 
+	rcall pixel_izquierda
+
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_abajo
+	
+	rcall pixel_izquierda
 	rcall pixel_izquierda
 
 	rcall pixel_abajo
@@ -250,6 +275,16 @@ dibujar_circulo:
 	rcall pixel_arriba
 	
 	rcall pixel_izquierda
+	rcall pixel_izquierda
+	
+	rcall pixel_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	rcall pixel_izquierda
 	
 	rcall pixel_arriba
 	rcall pixel_arriba
@@ -268,6 +303,16 @@ dibujar_circulo:
 	rcall pixel_arriba
 	rcall pixel_arriba
 
+	rcall pixel_derecha
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+
+	rcall pixel_derecha
+	
+	rcall pixel_arriba
+
+	rcall pixel_derecha
 	rcall pixel_derecha
 
 	rcall pixel_arriba
