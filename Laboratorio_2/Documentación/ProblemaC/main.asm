@@ -87,9 +87,8 @@ figura_circulo:
 	rjmp loop_menu
 
 figura_pentagrama:
-	ldi r16, 0b00010000
-	out PORTD, r16
 
+	rcall dibujar_pentagrama
 	rjmp loop_menu
 
 figura_libre:
@@ -182,6 +181,33 @@ pixel_izquierda_arriba:
 	rcall delay_pixel
 	cbi PORTD, BIT_IZQUIERDA
 	cbi PORTD, BIT_ARRIBA
+	ret
+
+pixel_derecha_arriba:
+	;un pixel para la derecha arriba
+	sbi PORTD, BIT_DERECHA
+	sbi PORTD, BIT_ARRIBA
+	rcall delay_pixel
+	cbi PORTD, BIT_DERECHA
+	cbi PORTD, BIT_ARRIBA
+	ret
+
+pixel_izquierda_abajo:
+	;un pixel para la izquierda abajo
+	sbi PORTD, BIT_IZQUIERDA
+	sbi PORTD, BIT_ABAJO
+	rcall delay_pixel
+	cbi PORTD, BIT_IZQUIERDA
+	cbi PORTD, BIT_ABAJO
+	ret
+
+pixel_derecha_abajo:
+	;un pixel para la izquierda abajo
+	sbi PORTD, BIT_IZQUIERDA
+	sbi PORTD, BIT_ABAJO
+	rcall delay_pixel
+	cbi PORTD, BIT_IZQUIERDA
+	cbi PORTD, BIT_ABAJO
 	ret
 
 dibujar_triangulo:
@@ -371,6 +397,145 @@ dibujar_circulo:
 	rcall detener_movimiento
 	rcall subir_solenoide
 
+	ret
+
+dibujar_pentagrama:
+	
+	rcall detener_movimiento
+	rcall bajar_solenoide
+	;linea 1
+	rcall pixel_derecha_abajo
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+
+	rcall pixel_derecha_abajo
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_derecha_abajo
+
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_derecha_abajo
+
+	rcall pixel_abajo
+
+	rcall pixel_derecha_abajo
+
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_derecha_abajo
+
+	rcall pixel_abajo
+
+	;linea 2
+
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_arriba
+	
+	;linea 3
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	
+	;linea 4
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	
+	rcall pixel_izquierda
+	
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+
+	;linea 5
+	
+	rcall pixel_arriba
+	
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_arriba
+	
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	rcall pixel_arriba
+
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	rcall pixel_derecha_arriba
+
+	rcall detener_movimiento
+	rcall subir_solenoide
 	ret
 
 delay_100ms:
