@@ -77,25 +77,8 @@ chequear_UART:
 	ret
 
 figura_triangulo:
-	rcall detener_movimiento
-	rcall bajar_solenoide
-
-	sbi PORTD, BIT_ABAJO
-	rcall delay_recta_triangulo
-	cbi PORTD, BIT_ABAJO
 	
-	sbi PORTD, BIT_DERECHA
-	rcall delay_recta_triangulo
-	cbi PORTD, BIT_DERECHA
-	
-	sbi PORTD, BIT_IZQUIERDA
-	sbi PORTD, BIT_ARRIBA
-	rcall delay_recta_triangulo
-
-	rcall detener_movimiento
-	
-	rcall subir_solenoide
-
+	rcall dibujar_triangulo
 	rjmp loop_menu
 
 figura_circulo:
@@ -192,9 +175,29 @@ pixel_derecha:
 	cbi PORTD, BIT_DERECHA
 	ret
 
+dibujar_triangulo:
+	rcall detener_movimiento
+	rcall bajar_solenoide
+
+	sbi PORTD, BIT_ABAJO
+	rcall delay_recta_triangulo
+	cbi PORTD, BIT_ABAJO
+	
+	sbi PORTD, BIT_DERECHA
+	rcall delay_recta_triangulo
+	cbi PORTD, BIT_DERECHA
+	
+	sbi PORTD, BIT_IZQUIERDA
+	sbi PORTD, BIT_ARRIBA
+	rcall delay_recta_triangulo
+
+	rcall detener_movimiento
+	rcall subir_solenoide
+
+	ret
 
 dibujar_circulo:
-;circulo 14px diametro
+	;circulo 14px diametro
 	rcall detener_movimiento
 	rcall bajar_solenoide
 
@@ -278,7 +281,6 @@ dibujar_circulo:
 	rcall pixel_derecha
 	
 	rcall detener_movimiento
-	
 	rcall subir_solenoide
 
 	ret
