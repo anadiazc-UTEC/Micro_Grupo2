@@ -39,7 +39,11 @@ start:
 
 	ldi r16,	(1<<UCSZ01) | (1<<UCSZ00)
 	sts UCSR0C,	r16
+	
+	ldi r18, 0; lugar en la hoja
+	ldi r19, 30 ;espacio para cada dibujo
 
+	rcall subir_solenoide
 	rcall mover_al_principio
 
 loop_menu:
@@ -108,18 +112,18 @@ ejecutar_todo:
 	rjmp loop_menu
 
 mover_al_principio:
-	rcall subir_solenoide
-	sbi PORTD, BIT_IZQUIERDA
-	;delay de 20 segundos
-	rcall delay_2500ms
-	rcall delay_2500ms
-	rcall delay_2500ms
-	rcall delay_2500ms
-	rcall delay_2500ms
-	rcall delay_2500ms
-	rcall delay_2500ms
-	rcall delay_2500ms
-	cbi PORTD, BIT_IZQUIERDA
+	;aprox cada dibujo mide 20x20 (redondeando)
+	;le agregamos 10 para espaciar
+	;son 5 dibujos, por ende 30 x 5 = 150
+	
+	rcall pixel_izquierda
+	inc r18
+	
+	cpi r18, 150
+	brne mover_al_principio
+
+	ldi r18, 150
+
 	ret
 	
 subir_solenoide:
@@ -200,11 +204,11 @@ pixel_izquierda_abajo:
 	ret
 
 pixel_derecha_abajo:
-	;un pixel para la izquierda abajo
-	sbi PORTD, BIT_IZQUIERDA
+	;un pixel para la derecha abajo
+	sbi PORTD, BIT_DERECHA
 	sbi PORTD, BIT_ABAJO
 	rcall delay_pixel
-	cbi PORTD, BIT_IZQUIERDA
+	cbi PORTD, BIT_DERECHA
 	cbi PORTD, BIT_ABAJO
 	ret
 
