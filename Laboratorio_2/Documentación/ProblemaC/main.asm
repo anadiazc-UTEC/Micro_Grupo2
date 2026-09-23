@@ -92,9 +92,8 @@ figura_pentagrama:
 	rjmp loop_menu
 
 figura_libre:
-	ldi r16, 0b00100000
-	out PORTD, r16
-
+	
+	rcall dibujar_libre
 	rjmp loop_menu
 
 figura_pokemon:
@@ -538,6 +537,83 @@ dibujar_pentagrama:
 	rcall subir_solenoide
 	ret
 
+dibujar_libre:
+
+	;dibujar un corazon
+	rcall detener_movimiento
+	;iniciaremos desde mas abajo
+	rcall subir_solenoide
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+
+	rcall bajar_solenoide
+	
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	rcall pixel_abajo
+	
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
+	
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	rcall pixel_arriba
+	rcall pixel_arriba
+	
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	
+	rcall pixel_derecha
+	rcall pixel_derecha
+	rcall pixel_derecha
+	
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	
+	rcall subir_solenoide
+	
+	rcall pixel_arriba
+	rcall pixel_arriba
+	rcall pixel_arriba
+	rcall pixel_arriba
+
+	rcall detener_movimiento
+	ret
 delay_100ms:
 	ldi r28, 157
 l6:
