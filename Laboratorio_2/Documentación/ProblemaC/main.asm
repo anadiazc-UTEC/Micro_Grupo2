@@ -8,8 +8,8 @@
 .equ BIT_SUBIR		= PORTD3
 .equ BIT_ABAJO		= PORTD4
 .equ BIT_ARRIBA		= PORTD5
-.equ BIT_IZQUIERDA	= PORTD6
-.equ BIT_DERECHA	= PORTD7
+.equ BIT_IZQUIERDA	= PORTD7
+.equ BIT_DERECHA	= PORTD6
 .org 0x0000
 rjmp start
 
@@ -40,11 +40,11 @@ start:
 	ldi r16,	(1<<UCSZ01) | (1<<UCSZ00)
 	sts UCSR0C,	r16
 	
-	ldi r18, 0; lugar en la hoja
+	ldi r18, 150; lugar en la hoja
 	ldi r19, 30 ;espacio para cada dibujo
 
 	rcall subir_solenoide
-	rcall mover_al_principio
+	rcall nueva_linea
 
 loop_menu:
     rcall chequear_UART
@@ -106,10 +106,43 @@ figura_pokemon:
 	rjmp loop_menu
 
 ejecutar_todo:
-	ldi r16, 0b10000000
-	out PORTD, r16
+
+	rcall dibujar_triangulo
+
+	rcall dibujar_circulo
+
+	rcall dibujar_pentagrama
+
+	rcall dibujar_libre
+
+	rcall dibujar_pokemon
 
 	rjmp loop_menu
+
+avanzar_siguiente_espacio:
+	rcall subir_solenoide
+	ldi r20, 30
+bucle_avanzar:
+	rcall pixel_derecha
+	dec r20
+	brne bucle_avanzar
+
+	add r18, r19
+	cpi r18, 150
+	brsh nueva_linea
+	ret
+
+nueva_linea:
+	; bajar 30 px para iniciar la siguiente fila
+	ldi r20, 40
+bucle_bajar_fila:
+	
+	rcall pixel_abajo
+	dec r20
+	brne bucle_bajar_fila
+
+	rcall mover_al_principio
+	ret
 
 mover_al_principio:
 	;aprox cada dibujo mide 20x20 (redondeando)
@@ -117,12 +150,10 @@ mover_al_principio:
 	;son 5 dibujos, por ende 30 x 5 = 150
 	
 	rcall pixel_izquierda
-	inc r18
 	
-	cpi r18, 150
+	dec r18
 	brne mover_al_principio
 
-	ldi r18, 150
 
 	ret
 	
@@ -264,6 +295,8 @@ dibujar_triangulo:
 
 	rcall detener_movimiento
 	rcall subir_solenoide
+	
+	rcall avanzar_siguiente_espacio
 
 	ret
 
@@ -398,6 +431,8 @@ dibujar_circulo:
 	
 	rcall detener_movimiento
 	rcall subir_solenoide
+	
+	rcall avanzar_siguiente_espacio
 
 	ret
 
@@ -538,6 +573,8 @@ dibujar_pentagrama:
 
 	rcall detener_movimiento
 	rcall subir_solenoide
+
+	rcall avanzar_siguiente_espacio
 	ret
 
 dibujar_libre:
@@ -616,6 +653,9 @@ dibujar_libre:
 	rcall pixel_arriba
 
 	rcall detener_movimiento
+	
+	rcall avanzar_siguiente_espacio
+
 	ret
 
 dibujar_pokemon:
@@ -800,6 +840,9 @@ dibujar_pokemon:
 
 	rcall detener_movimiento
 	rcall subir_solenoide
+	
+	rcall avanzar_siguiente_espacio
+
 	ret
 
 delay_100ms:
@@ -841,11 +884,11 @@ l1:
 
 delay_pixel:
 	;1px  = 1s
-	ldi r28, 201
+	ldi r28, 234
 l9:
-	ldi r29, 169
+	ldi r29, 178
 l8:
-	ldi r30, 156
+	ldi r30, 15
 l7:
 	dec r30
 	brne l7
