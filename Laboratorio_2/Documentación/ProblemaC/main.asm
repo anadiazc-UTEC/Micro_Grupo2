@@ -8,8 +8,8 @@
 .equ BIT_SUBIR		= PORTD3
 .equ BIT_ABAJO		= PORTD4
 .equ BIT_ARRIBA		= PORTD5
-.equ BIT_IZQUIERDA	= PORTD7
-.equ BIT_DERECHA	= PORTD6
+.equ BIT_IZQUIERDA	= PORTD6
+.equ BIT_DERECHA	= PORTD7
 .org 0x0000
 rjmp start
 
@@ -46,6 +46,8 @@ start:
 	rcall subir_solenoide
 	rcall nueva_linea
 
+	rcall mostrar_menu
+
 loop_menu:
     rcall chequear_UART
     
@@ -68,8 +70,7 @@ loop_menu:
     cpi r16, 'T'
     breq ejecutar_todo
 
-    rjmp loop_menu
-
+	rjmp loop_menu
 
 chequear_UART:
 	lds r17, UCSR0A
@@ -78,6 +79,13 @@ chequear_UART:
 
 	lds r16, UDR0
 
+	ret
+transmitir_UART:
+	lds r17, UCSR0A
+	sbrs r17, UDRE0
+	rjmp transmitir_UART
+
+	sts UDR0, r16
 	ret
 
 figura_triangulo:
@@ -118,6 +126,32 @@ ejecutar_todo:
 	rcall dibujar_pokemon
 
 	rjmp loop_menu
+
+mostrar_menu:
+	ldi ZL, low(TXT_MENU * 2)
+	ldi ZH, high(TXT_MENU * 2)
+	rcall imprimir_cadena
+	ret
+
+imprimir_cadena:
+	lpm r16, Z+
+	tst r16
+	breq fin_impresion
+	rcall transmitir_UART
+	rjmp imprimir_cadena
+fin_impresion:
+	ret
+TXT_MENU:
+	.db 0x0D, 0x0A, "CONTROL DE PLOTTER - MENU ", 0x0D, 0x0A
+	.db "----------------------------------", 0x0D, 0x0A
+	.db "1. Triangulo", 0x0D, 0x0A
+	.db "2. Circulo", 0x0D, 0x0A
+	.db "3. Pentagrama ", 0x0D, 0x0A
+	.db "4. Corazon (Figura Libre) ", 0x0D, 0x0A
+	.db "P. Pokemon", 0x0D, 0x0A
+	.db "T. Dibujar Toda la Secuencia", 0x0D, 0x0A
+	.db "----------------------------------", 0x0D, 0x0A
+	.db "Seleccione opcion: ", 0
 
 avanzar_siguiente_espacio:
 	rcall subir_solenoide
@@ -250,48 +284,62 @@ dibujar_triangulo:
 	rcall bajar_solenoide
 
 	;primer cateto
-	rcall pixel_abajo
-	rcall pixel_abajo
-	rcall pixel_abajo
-	rcall pixel_abajo
-	rcall pixel_abajo
-	rcall pixel_abajo
-	rcall pixel_abajo
-	rcall pixel_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
 	
-	;segundo cateto
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-	rcall pixel_derecha
-
 	;hipotenusa
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
-	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+	rcall pixel_izquierda
+
+	;segundo cateto
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+
 
 	rcall detener_movimiento
 	rcall subir_solenoide
@@ -765,6 +813,11 @@ dibujar_pokemon:
 	rcall pixel_derecha_abajo
 	
 	rcall pixel_derecha
+
+	rcall pixel_derecha_arriba
+	rcall pixel_derecha_arriba
+	rcall pixel_izquierda_abajo
+	rcall pixel_izquierda_abajo
 	
 	rcall pixel_derecha_abajo
 	
@@ -801,6 +854,11 @@ dibujar_pokemon:
 	
 	rcall pixel_derecha_arriba
 	rcall pixel_derecha_arriba
+	
+	rcall pixel_izquierda_arriba
+	rcall pixel_izquierda_arriba
+	rcall pixel_derecha_abajo
+	rcall pixel_derecha_abajo
 	
 	rcall pixel_derecha
 	
