@@ -43,15 +43,17 @@ start:
 	ldi r18, 150; lugar en la hoja
 	ldi r19, 30 ;espacio para cada dibujo
 
+	;inicializamos a la izquierda del todo el solenoide para medir correctamente las impresiones
 	rcall subir_solenoide
 	rcall nueva_linea
 
+	;muestro las opciones al usuario
 	rcall mostrar_menu
 
 loop_menu:
+	;reviso si hay un input
     rcall chequear_UART
     
-	;RCALL delay_100ms
     cpi r16, '1'
     breq figura_triangulo
 
@@ -80,6 +82,7 @@ chequear_UART:
 	lds r16, UDR0
 
 	ret
+
 transmitir_UART:
 	lds r17, UCSR0A
 	sbrs r17, UDRE0
@@ -154,6 +157,7 @@ TXT_MENU:
 	.db "Seleccione opcion: ", 0
 
 avanzar_siguiente_espacio:
+	;muevo hacia la derecha 30 px para separar los dibujos
 	rcall subir_solenoide
 	ldi r20, 30
 bucle_avanzar:
@@ -162,6 +166,7 @@ bucle_avanzar:
 	brne bucle_avanzar
 
 	add r18, r19
+	;si superamos el umbral, bajamos una linea para seguir dibujando
 	cpi r18, 150
 	brsh nueva_linea
 	ret
@@ -278,7 +283,7 @@ pixel_derecha_abajo:
 	ret
 
 dibujar_triangulo:
-	;triangulo rectangulo 8x15x17
+	;triangulo rectangulo isoseles acostado
 
 	rcall detener_movimiento
 	rcall bajar_solenoide
@@ -708,6 +713,7 @@ dibujar_libre:
 
 dibujar_pokemon:
 
+	;basado en el pixel art
 	rcall detener_movimiento
 	rcall bajar_solenoide
 	;estrella
@@ -918,25 +924,6 @@ l4:
 
 	dec r28
 	brne l6
-	
-	ret
-
-
-delay_2500ms:
-	ldi r28, 251
-l3:
-	ldi r29, 234
-l2:
-	ldi r30, 226
-l1:
-	dec r30
-	brne l1
-
-	dec r29
-	brne l2	
-
-	dec r28
-	brne l3
 	
 	ret
 
