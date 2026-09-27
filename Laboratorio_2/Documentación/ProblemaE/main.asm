@@ -19,26 +19,31 @@
 ;PINB0		= MOTOR ABRIR
 ;PINB1		= MOTOR CERRAR
 ;PINB2		= ALARMA
+
 .org 0x0000
 	rjmp RESET
 .org 0x000A		;PCINT2 (PORTD)
 	rjmp ISR_OBSTACULO
 RESET:
+	; Inicializar sp
 	ldi temp,	high(RAMEND)
 	out SPH,	temp
 	ldi temp,	low(RAMEND)
 	out SPL,	temp
 
+	; configurar pines de salida 
 	ldi temp,	(1<<PINB0) | (1<<PINB1) | (1<<PINB2)
 	out DDRB,	temp
 	ldi temp,	0x00
 	out PORTB,	temp
 
+	; configurar pines de entrada pull down
 	ldi temp,	0x00
 	out DDRD,	temp
 	ldi temp,	0x00
 	out PORTD,	temp
 
+	; configurar uart
 	ldi temp,	LOW(103)
 	sts UBRR0L,	temp
 	ldi temp,	HIGH(103)
@@ -50,6 +55,7 @@ RESET:
 	ldi temp,	(1<<UCSZ01) | (1<<UCSZ00)
 	sts UCSR0C,	temp
 
+	;configurar interrupcion 
 	ldi temp,	(1<<PCIE2)
 	sts PCICR,	temp
 	ldi temp,	(1<<PCINT22)
@@ -57,11 +63,13 @@ RESET:
 
 	sei
 
+	;iniciaizar variables
 	ldi estado,		0x00
 	
 	ldi msg_blk,	0x00
 	ldi flag_obs,	0x00
 
+	;validar estado del sensor de obstaculo
 	sbis PIND,		PIND6
 	rjmp main_loop
 	
@@ -137,12 +145,16 @@ ejecutar_bloqueada:
 	ldi temp, 0x00
 	out PORTB, temp
 	
+	
 	cpi msg_blk, 0x01
 	brne verificar_botones_bloqueo
 
+	;muestro el mensaje de obstaculo
 	ldi r31, HIGH(msg_obstaculo << 1)
 	ldi r30, LOW(msg_obstaculo << 1)
 	rcall imprimir_cadena
+
+	;marco el mensaje como enviado para que no se repita infinitas veces en cada loop
 	ldi msg_blk, 0x00
 
 	rjmp verificar_botones_bloqueo
@@ -164,6 +176,7 @@ boton_abrir:
 	sbic PIND, PIND2
 	rjmp boton_abrir
 
+	;muestro el mensaje de abriendo puerta
 	ldi r31, HIGH(msg_abriendo << 1)
 	ldi r30, LOW(msg_abriendo << 1)
 	rcall imprimir_cadena
@@ -180,6 +193,7 @@ boton_cerrar:
 	sbic PIND, PIND3
 	rjmp boton_cerrar
 
+	;muestro el mensaje de cerrando puerta
 	ldi r31, HIGH(msg_cerrando << 1)
 	ldi r30, LOW(msg_cerrando << 1)
 	rcall imprimir_cadena
@@ -192,6 +206,7 @@ boton_cerrar:
 
 sensor_abierto:
 
+	;muestro el mensaje de puerta abierta
 	ldi r31, HIGH(msg_abierta << 1)
 	ldi r30, LOW(msg_abierta << 1)
 	rcall imprimir_cadena
@@ -201,6 +216,8 @@ sensor_abierto:
 	rjmp main_loop
 
 sensor_cerrado:
+
+	;muestro el mensaje de puerta cerrada
 	ldi r31, HIGH(msg_cerrada << 1)
 	ldi r30, LOW(msg_cerrada << 1)
 	rcall imprimir_cadena
@@ -210,6 +227,7 @@ sensor_cerrado:
 	rjmp main_loop
 
 re_obstaculo:
+	;remarco el estado bloqueado
 	ldi estado, 0x04
 	ldi msg_blk, 0x01
 	rjmp main_loop
@@ -251,6 +269,8 @@ ISR_OBSTACULO:
 	rjmp obstaculo_retirado
 
 obstaculo_detectado:
+	
+	;marco que hay un obstaculo en memoria
 	ldi flag_obs, 0x01
 
 	cpi estado, 0x01
@@ -262,6 +282,8 @@ obstaculo_detectado:
 	rjmp FIN_ISR
 
 obstaculo_retirado:
+	
+	;desmarco que hay un obstaculo en memoria
 	ldi flag_obs, 0x00
 	rjmp FIN_ISR
 
