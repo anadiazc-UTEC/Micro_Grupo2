@@ -63,14 +63,23 @@ esperar_soltar:
     ret
 
 delay_variable:
-    mov r24, nivel_delay ; Carga el nivel actual (1, 2, 3 o 4)
-loop_nivel:
-    ldi r26, 250         ; Valor base del retardo
+    mov r23, nivel_delay ; Carga el nivel actual (1, 2, 3 o 4)
+loop_externo:
+    ldi r24, 241         ; Valor base del retardo
+loop_intermedio:
+	ldi r26, 158
+loop_interno:
+	ldi r27, 13
 loop_base:
-    dec r26
+    dec r27
     brne loop_base
-    dec r24
-    brne loop_nivel
+    dec r26
+    brne loop_interno
+	dec r24
+	brne loop_intermedio
+	dec r23
+	brne loop_externo
+
     ret
 
 delay_antirrebote:
