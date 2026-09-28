@@ -152,7 +152,7 @@ TXT_MENU:
 	.db "3. Pentagrama ", 0x0D, 0x0A
 	.db "4. Corazon (Figura Libre) ", 0x0D, 0x0A
 	.db "P. Pokemon", 0x0D, 0x0A
-	.db "T. Dibujar Toda la Secuencia", 0x0D, 0x0A
+	.db "T. Dibujar Todo ", 0x0D, 0x0A
 	.db "----------------------------------", 0x0D, 0x0A
 	.db "Seleccione opcion: ", 0
 
