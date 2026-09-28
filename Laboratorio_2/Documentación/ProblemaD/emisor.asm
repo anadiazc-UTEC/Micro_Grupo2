@@ -29,11 +29,11 @@ inicio:
     RCALL initUART
 	
 	in R20, PINB ; Guarda el valor de los pulsadores en r20
-	andi R20, 0b00000111 ; Mascara para quedarme solo con el valor de los switch
+	andi R20, 0b00000111 ; Mascara para quedarme solo con el valor de los switches
 	
 loop:
 	in r16, PINB ; Lee el valor de PINB
-	andi r16, 0b00000111 ; Me quedo solamente con los tres bits de los switch 
+	andi r16, 0b00000111 ; Me quedo solamente con los tres bits de los switches
 
 	CP R16, R20 ; Verifica si cambio el estado del switch
     BREQ loop ; Si no cambio repite
@@ -45,7 +45,7 @@ loop:
 initUART:
     STS UBRR0L, R16 ; Carga byte bajo del divisor del baud rate
     STS UBRR0H, R17 ; Carga byte alto
-    LDI R16, (1 << TXEN0) ; Solo habilitar transmisor
+    LDI R16, (1 << TXEN0) ; Solo habilita transmisor
     STS UCSR0B, R16   
     RET
 
@@ -54,7 +54,7 @@ putc:
     SBRS R17, UDRE0 ; ¿Buffer de transmisión vacío?
     RJMP putc ; Si no, espera
     STS UDR0, R16 ; Envía el carácter a transmitir
-    LDI R16, 0 ; Limpia R16 (opcional)
+    LDI R16, 0 ; Limpia R16 
     RET ; Retorna
 
 
