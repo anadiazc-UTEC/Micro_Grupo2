@@ -40,6 +40,19 @@ configurar:
     
     call guardar1
     call guardar2
+
+    call configurar_timer
+
+    ret
+
+configurar_timer:
+    ; Configurar Timer0 en Modo CTC
+    ldi r20, (1 << WGM01)
+    TCCR0A, r20
+
+    ; Configurar prescaler
+    ldi r20, (1 << CS01)
+    out TCCR0B, r20
     ret
 
 chequear_boton:
@@ -63,22 +76,28 @@ esperar_soltar:
     ret
 
 delay_variable:
-    mov r23, nivel_delay ; Carga el nivel actual (1, 2, 3 o 4)
-loop_externo:
-    ldi r24, 241         ; Valor base del retardo
-loop_intermedio:
-	ldi r26, 158
-loop_interno:
-	ldi r27, 13
-loop_base:
-    dec r27
-    brne loop_base
-    dec r26
-    brne loop_interno
-	dec r24
-	brne loop_intermedio
-	dec r23
-	brne loop_externo
+    ; Nivel 1: 50  (25 us por punto) periodo 6.4 ms
+    ; Nivel 2: 100 (50 us por punto) periodo 12.8 ms
+    ; Nivel 3: 150 (75 us por punto) periodo 19.2 ms
+    ; Nivel 4: 200 (100 us por punto) periodo 25.6 ms
+    
+    mov r20, nivel_delay
+    ldi r21, 50
+    mul r20, r21
+    mov r20, r0
+
+    out OCR0A, r20
+
+    clr r20
+    out TCNT0, r20
+
+    ldi r20, (1 << OCF0A)
+    out TIFR0, r20
+
+esperar_timer:
+    in r20, TIFR0
+    sbrs r20, OCF0A
+    rjmp esperar_timer
 
     ret
 
@@ -91,20 +110,30 @@ loop_anti:
 
 bucle_principal:
     call getc
+    mov r30, r16
 
-    cpi r16, '1'
-    breq bucle_senal1
+loop_infinito:
+    cpi r30, '1'
+    breq generar_senal1
+    cpi r30, '2'
+    breq generar_senal2
+    rjmp chequear_nuevo_comando
 
-    cpi r16, '2'
-    breq leer_senal2
+generar_senal1:
+    call leer_derecho
+    call leer_reves
+    rjmp chequear_nuevo_comando
 
-    rjmp bucle_principal
+generar_senal2:
+    call leer_senal2
+    rjmp chequear_nuevo_comando
 
-bucle_senal1:
-    call leer_derecho    
-    call leer_reves      
-    rjmp bucle_principal
-
+chequear_nuevo_comando:
+    LDS R17, UCSR0A
+    SBRC R17, RXC0
+    LDS r30, UDR0
+    rjmp loop_infinito
+    
 guardar1:
     ldi r28, 0x00 ;LOW(0x0100)
     ldi r29, 0x01 ;HIGH(0x0100)
@@ -198,7 +227,7 @@ bucle_lectura2:
     inc cantidadValores
     brne bucle_lectura2
 
-    rjmp bucle_principal
+    ret 
 
 initUART:
     STS UBRR0L, R16            ; Carga byte bajo del divisor del baud rate
