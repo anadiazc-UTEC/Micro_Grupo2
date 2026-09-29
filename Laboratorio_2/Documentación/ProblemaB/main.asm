@@ -48,7 +48,7 @@ configurar:
 configurar_timer:
     ; Configurar Timer0 en Modo CTC
     ldi r20, (1 << WGM01)
-    TCCR0A, r20
+    out TCCR0A, r20
 
     ; Configurar prescaler
     ldi r20, (1 << CS01)
