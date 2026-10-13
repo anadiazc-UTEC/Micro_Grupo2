@@ -4,10 +4,11 @@ colores a detectar
 PINOUT
 A5 SCL
 A4 SLA
+A0 Fotocelda
 PIN 9 servo
-PIN 3 ROJO
-PIN 5 VERDE
-PIN 6 AZUL
+PIN 8 LEDS
+
+
 */
 #define PCF8574	0x27
 #define F_CPU 16000000UL
@@ -25,56 +26,56 @@ typedef struct {
 	uint8_t b;
 } RGB_t;
 
-struct plastico{
+typedef struct {
 	uint16_t max_color[3];
 	uint16_t min_color[3];
-};
+} Plastico;
 
 RGB_t strip[NUM_LEDS];
 
-struct plastico plastico_rojo;
-struct plastico plastico_verde;
-struct plastico plastico_amarillo;
-struct plastico plastico_azul;
+Plastico plastico_rojo;
+Plastico plastico_verde;
+Plastico plastico_amarillo;
+Plastico plastico_azul;
 
 char color;
 
 void plasticos_init(void){
 	// Rojo
-	plastico_rojo.max_color[0] = 474;
-	plastico_rojo.max_color[1] = 149;
-	plastico_rojo.max_color[2] = 133;
+	plastico_rojo.max_color[0] = 480;
+	plastico_rojo.max_color[1] = 150;
+	plastico_rojo.max_color[2] = 140;
 
-	plastico_rojo.min_color[0] = 412;
-	plastico_rojo.min_color[1] = 83;
-	plastico_rojo.min_color[2] = 68;
+	plastico_rojo.min_color[0] = 410;
+	plastico_rojo.min_color[1] = 80;
+	plastico_rojo.min_color[2] = 60;
 
 	// Verde
 	plastico_verde.max_color[0] = 40;
-	plastico_verde.max_color[1] = 177;
-	plastico_verde.max_color[2] = 166;
+	plastico_verde.max_color[1] = 180;
+	plastico_verde.max_color[2] = 170;
 
 	plastico_verde.min_color[0] = 0;
-	plastico_verde.min_color[1] = 117;
-	plastico_verde.min_color[2] = 106;
+	plastico_verde.min_color[1] = 110;
+	plastico_verde.min_color[2] = 100;
 
 	// Amarillo
-	plastico_amarillo.max_color[0] = 501;
-	plastico_amarillo.max_color[1] = 525;
-	plastico_amarillo.max_color[2] = 588;
+	plastico_amarillo.max_color[0] = 510;
+	plastico_amarillo.max_color[1] = 530;
+	plastico_amarillo.max_color[2] = 590;
 
-	plastico_amarillo.min_color[0] = 441;
-	plastico_amarillo.min_color[1] = 465;
-	plastico_amarillo.min_color[2] = 528;
+	plastico_amarillo.min_color[0] = 440;
+	plastico_amarillo.min_color[1] = 460;
+	plastico_amarillo.min_color[2] = 520;
 
 	// Azul
-	plastico_azul.max_color[0] = 54;
-	plastico_azul.max_color[1] = 209;
-	plastico_azul.max_color[2] = 292;
+	plastico_azul.max_color[0] = 60;
+	plastico_azul.max_color[1] = 210;
+	plastico_azul.max_color[2] = 300;
 
 	plastico_azul.min_color[0] = 0;
-	plastico_azul.min_color[1] = 149;
-	plastico_azul.min_color[2] = 232;
+	plastico_azul.min_color[1] = 140;
+	plastico_azul.min_color[2] = 230;
 }
 
 void ws2812_send_byte(uint8_t byte) {
@@ -114,6 +115,7 @@ void ws2812_show(void) {
 	_delay_us(60);
 }
 void ws2812_set_pixel(uint16_t index, uint8_t r, uint8_t b, uint8_t g) {
+	// usamos rbg en vez de rgb porque en la practica notamos que el ws2812 inveria los colores g y b
 	if (index >= 0 && index < NUM_LEDS) {
 		strip[index].r = r;
 		strip[index].g = g;
@@ -152,44 +154,30 @@ char UART_receiveChar(void){
 	while (!(UCSR0A & (1 << RXC0)));
 	return UDR0;
 }
+
 void UART_transmit(char data) {
-	// Esperar a que el buffer de transmisión esté vacío
 	while (!(UCSR0A & (1 << UDRE0)));
-	
-	// Poner el dato en el registro de transmisión
 	UDR0 = data;
 }
+
 void UART_send_string(const char* str) {
 	while (*str) {
 		UART_transmit(*str++);
 	}
 }
 void UART_send_rgb(uint16_t r, uint16_t g, uint16_t b) {
-	char buffer[40];
-	
-	// Formato estilo "R:1023 G:512 B:256\r\n"
-	snprintf(buffer, sizeof(buffer), "R:%u G:%u B:%u\r\n", r, g, b);
-	
-	// Si prefieres formato CSV (ej. "1023,512,256\n"), usa:
-	// snprintf(buffer, sizeof(buffer), "%u,%u,%u\r\n", r, g, b);
-	
-	UART_send_string(buffer);
+	//se usa snprintf para poder meter en un string el valor numerico
+	char str[40];
+	snprintf(str, sizeof(str), "R:%u G:%u B:%u\r\n", r, g, b);
+	UART_send_string(str);
 }
-// Enviar un número de 16 bits (0 a 65535) en texto ASCII
-void UART_send_number(uint16_t num) {
-	char buffer[10]; // Suficiente para "65535\r\n\0"
-	
-	// Convertir el número a texto
-	snprintf(buffer, sizeof(buffer), "%u\r\n", num);
-	
-	// Transmitir carácter por carácter
-	UART_send_string(buffer);
-}
+
 void ADC_init(void) {
 	ADMUX |= (1 << REFS0);
 	ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 	ADCSRA |= (1 << ADEN);
 }
+
 void I2C_init(void) {
 	TWBR = 72;
 	TWSR = 0x00;
@@ -211,8 +199,8 @@ void I2C_stop(void) {
 }
 
 void LCD_send_nibble(uint8_t nibble, uint8_t rs) {
-	uint8_t data = nibble | rs | 0x08;
 	
+	uint8_t data = nibble | rs | 0x08;
 	I2C_start();
 	I2C_write(PCF8574 << 1);
 	I2C_write(data | (1 << 2));
@@ -250,8 +238,6 @@ void LCD_init(void){
 	LCD_command(0x01);
 	_delay_ms(2);
 	LCD_command(0x06);
-	
-	
 }
 
 void LCD_send_string(const char *str) {
@@ -284,36 +270,11 @@ uint16_t leer_color(void){
 	for (int i = 0; i <10; i++){
 		val = ADC_read();
 		valor_color += val;
-		//UART_send_number(val);
 	}
 	return (valor_color / 10);
 }
 
-int comparar_plastico(struct plastico plastic, uint16_t rojo, uint16_t verde, uint16_t azul){
-	/*
-	UART_send_string("leido: ");
-	UART_send_rgb(rojo, verde, azul);
-	UART_send_string("max: ");
-	UART_send_rgb(plastic.max_color[0], plastic.max_color[1], plastic.max_color[2]);
-	UART_send_string("min: ");
-	UART_send_rgb(plastic.min_color[0], plastic.min_color[1], plastic.min_color[2]);
-	
-	if (plastic.max_color[0] >= rojo && plastic.min_color[0] <= rojo){
-		UART_send_string("rojo ok\n");
-	}else{
-		UART_send_string("rojo no\n");
-	}
-	if (plastic.max_color[1] >= verde && plastic.min_color[1] <= verde){
-		UART_send_string("verde ok\n");
-	}else{
-		UART_send_string("verde no\n");
-	}
-	if (plastic.max_color[2] >= azul && plastic.min_color[2] <= azul){
-		UART_send_string("azul ok\n");
-	}else{
-		UART_send_string("azul no\n");
-	}
-	*/
+int comparar_plastico(Plastico plastic, uint16_t rojo, uint16_t verde, uint16_t azul){
 	if ((plastic.max_color[0] >= rojo && plastic.min_color[0] <= rojo)
 		&& (plastic.max_color[1] >= verde && plastic.min_color[1] <= verde)
 		&& (plastic.max_color[2] >= azul && plastic.min_color[2] <= azul)){
@@ -334,37 +295,18 @@ char comparar_lectura(uint16_t rojo, uint16_t verde, uint16_t azul){
 		return 'B';
 	} else if(comparar_plastico(plastico_amarillo, rojo, verde, azul) == 1){
 		return 'Y';
-	} else {
-		return 'X';
 	}
+	
+	return 'X';
 }
-void iniciar_reconocimiento(void){
-	uint16_t valor_luz_rojo, valor_luz_verde, valor_luz_azul;
-	ws2812_set_all(0, 0, 0);
-	_delay_ms(100);
-	
-	//rojo
-	ws2812_set_all(255, 0, 0);
-	_delay_ms(1000);
-	//UART_send_string("R\n");
-	valor_luz_rojo = leer_color();
 
-	//verde
-	ws2812_set_all(0, 255, 0);
+uint16_t medir_luz(uint16_t r, uint16_t g, uint16_t b){
+	ws2812_set_all(r, g, b);
 	_delay_ms(1000);
-	//UART_send_string("G\n");
-	valor_luz_verde = leer_color();
-	
-	//azul
-	ws2812_set_all(0, 0, 255);
-	_delay_ms(1000);
-	//UART_send_string("B\n");
-	valor_luz_azul = leer_color();
-	
-	ws2812_set_all(0, 0, 0);
-	
-	color = comparar_lectura(valor_luz_rojo, valor_luz_verde, valor_luz_azul);
-	
+	return leer_color();
+}
+
+void mostrar_resultado(char color, uint16_t r, uint16_t g, uint16_t b){
 	switch (color){
 		case 'R':
 			LCD_send_string("Rojo");
@@ -386,19 +328,36 @@ void iniciar_reconocimiento(void){
 			mover_servo_grados(135);
 			ws2812_set_all(200, 150, 0);
 			break;
-		case 'X':
-			LCD_send_string("Desconocido");
-			mover_servo_grados(180);
-			ws2812_set_all(255, 255, 255);
-			break;
 		default:
 			LCD_send_string("Desconocido");
 			mover_servo_grados(180);
 			ws2812_set_all(255, 255, 255);
 			break;
 	}
+	
+	UART_send_string("Muestra recibida: ");
+	UART_send_rgb(r, g, b);
+	
 	_delay_ms(5000);
-	UART_send_rgb(valor_luz_rojo, valor_luz_verde, valor_luz_azul);
+}
+
+void iniciar_reconocimiento(void){
+	uint16_t valor_luz_rojo, valor_luz_verde, valor_luz_azul;
+	ws2812_set_all(0, 0, 0);
+	_delay_ms(100);
+	
+	//rojo
+	valor_luz_rojo = medir_luz(255, 0, 0);
+
+	//verde
+	valor_luz_verde =  medir_luz(0, 255, 0);
+	
+	//azul
+	valor_luz_azul =  medir_luz(0, 0, 255);
+	
+	ws2812_set_all(0, 0, 0);
+	
+	mostrar_resultado(comparar_lectura(valor_luz_rojo, valor_luz_verde, valor_luz_azul), valor_luz_rojo, valor_luz_verde, valor_luz_azul);
 	
 	ws2812_set_all(0, 0, 0);
 	
@@ -412,6 +371,8 @@ int main(void)
 	UART_init();
 	servo_init();
 	plasticos_init();
+	
+	UART_send_string("Ingrese I para iniciar el reconocimiento.\n");
 	while(1)
 	{
 		ws2812_set_all(0, 0, 0);
@@ -422,6 +383,7 @@ int main(void)
 		switch (op){
 			case 'I':
 				iniciar_reconocimiento();
+				UART_send_string("Ingrese I para iniciar el reconocimiento.\n");
 				break;
 		}
 		
