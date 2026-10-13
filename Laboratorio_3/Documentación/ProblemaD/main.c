@@ -83,35 +83,176 @@ void lcd_clear(void) {
 	_delay_ms(2);
 }
 
-int acompanamiento1[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 1
-int duracionesAc1[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 1
+// CANCIÓN 1: At Doom's gate
 
-int melodia1[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 1
-int duracionesMe1[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 1
+uint16_t melodia1[] = {
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 247, 165, 165, 233, 247,
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 233, 0,
 
-//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 247, 165, 165, 233, 247,
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 233, 0,
+
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 247, 165, 165, 233, 247,
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 233, 0,
+
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 247, 165, 165, 233, 247,
+    208, 247, 330, 392, 440, 494, 587, 659, 494, 587, 659, 0,
+
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 247, 165, 165, 233, 247,
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 233, 0,
+
+    165, 165, 330, 165, 165, 294, 165, 165, 262, 165, 165, 247, 165, 165, 233, 247,
+    208, 247, 330, 392, 440, 494, 587, 659, 494, 587, 659, 659
+};
+
+uint16_t duracionesMe1[] = {
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136,
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 273, 136,
+
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136,
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 273, 136,
+
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136,
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 273, 136,
+
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136,
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 273, 136,
+
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136,
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 273, 136,
+
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 136,
+    136, 136, 136, 136, 136, 136, 136, 136, 136, 136, 273, 545
+};
+
+uint16_t acompanamiento1[] = {
+    82, 0, 82, 0, 82, 0, 82, 0,
+    82, 0, 82, 0, 82, 0, 82, 0,
+    82, 0, 82, 0, 82, 0, 82, 0,
+    82, 0, 82, 0, 82, 0, 82, 0,
+
+    82, 82, 82, 82, 82, 82, 82, 82,
+    82, 82, 82, 82, 82, 82, 82, 82,
+    82, 82, 82, 82, 82, 82, 82, 82,
+    82, 82, 82, 82, 82, 82, 82, 82
+};
+
+uint16_t duracionesAc1[] = {
+    273, 1909, 273, 1909, 273, 1909, 273, 1909,
+    273, 1909, 273, 1909, 273, 1909, 273, 1909,
+
+    273, 273, 273, 273, 273, 273, 273, 273,
+    273, 273, 273, 273, 273, 273, 273, 273,
+    273, 273, 273, 273, 273, 273, 273, 273,
+    273, 273, 273, 273, 273, 273, 273, 273
+};
+
 int cantidadElementosAc1 = sizeof(acompanamiento1) / sizeof(acompanamiento1[0]);
 int cantidadElementosMe1 = sizeof(melodia1) / sizeof(melodia1[0]);
 
 
-int acompanamiento2[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 2
-int duracionesAc2[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 2
+// CANCIÓN 2: El rap de Fernanfloo
 
-int melodia2[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 2
-int duracionesMe2[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 2
+uint16_t melodia2[] = {
+    0, 0, 330, 392, 440, 466, 494,
+    330, 0, 330, 392, 440, 466, 494,
+    330, 0, 330, 392, 440, 466, 494,
+    523, 494, 392, 330,
 
-//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
+    330, 0, 330, 392, 440, 466, 494,
+    330, 0, 330, 392, 440, 466, 494,
+    330, 0, 330, 392, 440, 494, 523, 587,
+    659, 784, 659, 784,
+    880, 0, 784, 659, 587, 523
+};
+
+uint16_t duracionesMe2[] = {
+    285, 142, 142, 142, 142, 142, 142,
+    285, 142, 142, 142, 142, 142, 142,
+    285, 142, 142, 142, 142, 142, 142,
+    285, 285, 285, 285,
+
+    285, 142, 142, 142, 142, 142, 142,
+    285, 142, 142, 142, 142, 142, 142,
+    285, 142, 142, 142, 142, 142, 142, 142,
+    285, 285, 285, 285,
+    285, 142, 142, 142, 285, 285
+};
+
+uint16_t acompanamiento2[] = {
+    0, 165, 165, 131, 247, 165, 165, 131, 247
+};
+
+uint16_t duracionesAc2[] = {
+    1140, 1140, 1140, 1140, 1140, 1140, 1140, 1140, 1140
+};
+
 int cantidadElementosAc2 = sizeof(acompanamiento2) / sizeof(acompanamiento2[0]);
 int cantidadElementosMe2 = sizeof(melodia2) / sizeof(melodia2[0]);
 
 
-int acompanamiento3[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 3
-int duracionesAc3[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 3
+// CANCIÓN 3: Plantas vs Zombies
 
-int melodia3[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 3
-int duracionesMe3[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 3
+uint16_t melodia3[] = {
+    523, 523, 494, 523, 440, 349,
+    440, 349, 523, 349,
 
-//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
+    523, 523, 494, 523, 440, 349,
+    440, 349, 523, 349,
+
+    523, 523, 494, 523, 440, 349,
+    440, 349, 523, 349,
+
+    392, 440, 392, 440, 349, 262,
+    247, 262, 349, 440,
+    554, 587, 698, 750,
+
+    523, 523, 494, 523, 440, 349
+};
+
+uint16_t duracionesMe3[] = {
+    300, 300, 300, 300, 300, 900,
+    300, 900, 300, 900,
+
+    300, 300, 300, 300, 300, 900,
+    300, 900, 300, 900,
+
+    300, 300, 300, 300, 300, 900,
+    300, 900, 300, 900,
+
+    300, 300, 300, 300, 300, 600,
+    300, 300, 300, 600,
+    300, 300, 300, 600,
+
+    300, 300, 300, 300, 300, 900
+};
+
+uint16_t acompanamiento3[] = {
+    587, 880, 1046, 880, 587, 880, 1046, 880,
+    587, 880, 1046, 880, 587, 880, 1046, 880,
+    587, 880, 1046, 880, 587, 880, 1046, 880,
+    587, 880, 1046, 880, 587, 880, 1046, 880,
+    587, 880, 1046, 880, 587, 880, 1046, 880,
+
+    494, 698, 988, 698, 494, 698, 988, 698,
+
+    587, 880, 1175, 880, 587, 880, 1175, 880,
+    587, 880, 1175, 880, 587, 880, 1175, 880
+};
+
+uint16_t duracionesAc3[] = {
+    300, 300, 300, 300, 300, 300, 300, 300,
+    300, 300, 300, 300, 300, 300, 300, 300,
+    300, 300, 300, 300, 300, 300, 300, 300,
+    300, 300, 300, 300, 300, 300, 300, 300,
+    300, 300, 300, 300, 300, 300, 300, 300,
+
+    300, 300, 300, 300, 300, 300, 300, 300,
+
+    300, 300, 300, 300, 300, 300, 300, 300,
+    300, 300, 300, 300, 300, 300, 300, 300
+};
+
 int cantidadElementosAc3 = sizeof(acompanamiento3) / sizeof(acompanamiento3[0]);
 int cantidadElementosMe3 = sizeof(melodia3) / sizeof(melodia3[0]);
 
