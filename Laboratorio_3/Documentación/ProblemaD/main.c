@@ -4,62 +4,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-int acompanamiento1[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 1
-int duracionesAc1[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 1
-
-int melodia1[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 1
-int duracionesMe1[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 1
-
-//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
-int cantidadElementosAc1 = sizeof(acompanamiento1) / sizeof(acompanamiento1[0]);
-int cantidadElementosMe1 = sizeof(melodia1) / sizeof(melodia1[0]);
-
-
-int acompanamiento2[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 2
-int duracionesAc2[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 2
-
-int melodia2[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 2
-int duracionesMe2[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 2
-
-//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
-int cantidadElementosAc2 = sizeof(acompanamiento2) / sizeof(acompanamiento2[0]);
-int cantidadElementosMe2 = sizeof(melodia2) / sizeof(melodia2[0]);
-
-
-int acompanamiento3[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 3
-int duracionesAc3[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 3
-
-int melodia3[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 3
-int duracionesMe3[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 3
-
-//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
-int cantidadElementosAc3 = sizeof(acompanamiento3) / sizeof(acompanamiento3[0]);
-int cantidadElementosMe3 = sizeof(melodia3) / sizeof(melodia3[0]);
-
-void configurarPuertos(void){
-	DDRB = 0x00; // DDRB como ENTRADA para los botones (PB0, PB2, PB3, PB4, PB5)
-	DDRB |= (1 << PB1); // PB1 como SALIDA para buzzer de melodía
-	
-	// PD2, PD4 y PD5 como ENTRADA para botones
-	DDRD &= ~((1 << PD2) | (1 << PD4) | (1 << PD5));
-	DDRD |= (1 << PD3); // PD3 como SALIDA para el buzzer de acompañamiento
-	
-	PORTB &= ~(1 << PB1); // Apagamos los buzzers
-	PORTD &= ~(1 << PD3); // Apagamos los buzzers
-
-	DDRC = 0x3F; // PC0-PC5 como SALIDA para el display
-}
-void configurarTimers(void){
-	TCCR1A = 0;
-	TCCR1B = 0;
-	OCR1A = 0;
-
-	TCCR2A = 0;
-	TCCR2B = 0;
-	OCR2A = 0;
-	OCR2B = 0;
-}
-	
 void I2C_init(void) {
 	TWBR = 72; // Configura SCL a ~100 kHz con F_CPU = 16 MHz
 	TWSR = 0x00;
@@ -138,7 +82,109 @@ void lcd_clear(void) {
 	lcd_send_command(0x01);
 	_delay_ms(2);
 }
+
+int acompanamiento1[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 1
+int duracionesAc1[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 1
+
+int melodia1[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 1
+int duracionesMe1[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 1
+
+//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
+int cantidadElementosAc1 = sizeof(acompanamiento1) / sizeof(acompanamiento1[0]);
+int cantidadElementosMe1 = sizeof(melodia1) / sizeof(melodia1[0]);
+
+
+int acompanamiento2[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 2
+int duracionesAc2[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 2
+
+int melodia2[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 2
+int duracionesMe2[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 2
+
+//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
+int cantidadElementosAc2 = sizeof(acompanamiento2) / sizeof(acompanamiento2[0]);
+int cantidadElementosMe2 = sizeof(melodia2) / sizeof(melodia2[0]);
+
+
+int acompanamiento3[] = {}; // Contiene la lista de frecuencias necesarias para el acompanamiento de la cancion 3
+int duracionesAc3[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para el acompañamiento 3
+
+int melodia3[] = {}; // Contiene la lista de frecuencias necesaria para la melodia de la cancion 3
+int duracionesMe3[] = {}; // Contiene la lista de duraciónes de cada nota en milisegundos para la melodia 3
+
+//Guarda el largo de las melodias y acompañamientos con el fin de saber cuando se termina la canción cuando esta se esté reproduciendo.
+int cantidadElementosAc3 = sizeof(acompanamiento3) / sizeof(acompanamiento3[0]);
+int cantidadElementosMe3 = sizeof(melodia3) / sizeof(melodia3[0]);
+
+void configurarPuertos(void){
+	DDRB = 0x00; // DDRB como ENTRADA para los botones (PB0, PB2, PB3, PB4, PB5)
+	DDRB |= (1 << PB1); // PB1 como SALIDA para buzzer de melodía
 	
+	// PD2, PD4 y PD5 como ENTRADA para botones
+	DDRD &= ~((1 << PD2) | (1 << PD4) | (1 << PD5));
+	DDRD |= (1 << PD3); // PD3 como SALIDA para el buzzer de acompañamiento
+	
+	PORTB &= ~(1 << PB1); // Apagamos los buzzers
+	PORTD &= ~(1 << PD3); // Apagamos los buzzers
+
+	DDRC = 0x3F; // PC0-PC5 como SALIDA para el display
+}
+void configurarTimers(void){
+	TCCR1A = 0;
+	TCCR1B = 0;
+	OCR1A = 0;
+
+	TCCR2A = 0;
+	TCCR2B = 0;
+	OCR2A = 0;
+	OCR2B = 0;
+}
+
+void fijarFrecuenciaMelodia(int frecuencia){
+	if (frecuencia == 0){
+		TCCR1B = 0;
+		TCCR1A &= ~(1 << COM1A0);
+		PORTB &= ~(1 << PB1);
+		return;
+	}
+
+	uint16_t limite = (F_CPU / (2UL * 64UL * frecuencia)) - 1;
+	OCR1A = limite;
+
+	TCCR1A = (1 << COM1A0);
+	TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
+}
+
+void fijarFrecuenciaAcompanamiento(uint16_t frecuencia) {
+	if (frecuencia == 0) {
+		TCCR2B = 0;
+		TCCR2A &= ~((1 << COM2B1) | (1 << COM2B0));
+		PORTD &= ~(1 << PD3);
+		return;
+	}
+
+	uint16_t limite = (F_CPU / (2UL * 256UL * frecuencia)) - 1;
+
+	if (limite > 255) {
+		limite = 255;
+	}
+
+	OCR2A = limite;
+	OCR2B = limite;
+
+	TCCR2A = (1 << WGM21) | (1 << COM2B0);
+	TCCR2B = (1 << CS22) | (1 << CS21);
+}
+
+void apagarBuzzers(void) {
+	TCCR1B = 0;
+	TCCR1A &= ~(1 << COM1A0);
+	PORTB &= ~(1 << PB1);
+
+	TCCR2B = 0;
+	TCCR2A &= ~((1 << COM2B1) | (1 << COM2B0));
+	PORTD &= ~(1 << PD3);
+}
+
 void configurarUART(void) {
 	UBRR0H = (unsigned char)(103 >> 8);
 	UBRR0L = (unsigned char)(103);
@@ -162,91 +208,196 @@ char leerUART(void){
 	while (!(UCSR0A & (1 << RXC0)));
 	return UDR0;
 }
-	
-char menuModos(void);
-	// Muestra el menú de modo. 
-	char opcion = 0;
-	// Se queda esperando hasta que presionen P, p, C o c
-	int opcion = leerUART;
-	// return opcion
-	
-char menuCanciones(void);
-	// Muestra el menú de Cancion
-	// Esperar hasta recibir '1', '2' o '3'
-	int cancion = leerUART;
-	// return cancion
 
-	
-void elegirMusica(char cancion);
-	// Si cancion == '1' llama a reproducirCancion(acompanamiento1, melodia1, duracionesMe1, duracionesAc1, cantidadElementosMe1, cantidadElementosAc1)
-	// Si cancion == '2' llama a reproducirCancion(acompanamiento2, melodia2, duracionesMe2, duracionesAc2, cantidadElementosMe2, cantidadElementosAc2)
-	// Si cancion == '3' llama a reproducirCancion(acompanamiento3, melodia3, duracionesMe3, duracionesAc3, cantidadElementosMe3, cantidadElementosAc3)
+char menuModos(void){
+	escribirUARTString("\r\n");
+	escribirUARTString("===== MENU =====\r\n");
+	escribirUARTString("P: Piano\r\n");
+	escribirUARTString("C: Cancion\r\n");
+	escribirUARTString("Seleccione una opcion: ");
 
-void reproducirCancion(int acompanamiento[],int melodia[],int duracionesMe[],int duracionesAc[], int cantidadElementosMe, int cantidadElementosAc);
-	// Envia a los buzzers la melodia y acompanamiento correspondientes. 
+	char opcion;
+	do {
+		opcion = leerUART();
+	} while (opcion != 'P' && opcion != 'p' && opcion != 'C' && opcion != 'c');
+
+	return opcion;
+}
+
+char menuCanciones(void) {
+	lcd_clear();
+	lcd_write_string("Modo Canción");
+	escribirUARTString("\r\n");
+	escribirUARTString("===== CANCIONES =====\r\n");
+	escribirUARTString("1: Cancion 1\r\n");
+	escribirUARTString("2: Cancion 2\r\n");
+	escribirUARTString("3: Cancion 3\r\n");
+	escribirUARTString("M: Volver\r\n");
+	escribirUARTString("Seleccione una cancion: ");
+	
+	char cancion;
+	do {
+		cancion = leerUART();
+	} while (cancion != '1' && cancion != '2' && cancion != '3'&& cancion != 'm' && cancion != 'M');
+
+	return cancion;
+}
+
+void reproducirCancion(uint16_t acompanamiento[],uint16_t melodia[],uint16_t duracionesMe[],uint16_t duracionesAc[], int cantidadElementosMe, int cantidadElementosAc){
+	int indiceMe = 0;
+	int indiceAc = 0;
+	int tiempoMe = 0;
+	int tiempoAc = 0;
+	
+	fijarFrecuenciaMelodia(melodia[indiceMe]);
+	fijarFrecuenciaAcompanamiento(acompanamiento[indiceAc]);
+	
+	tiempoMe = duracionesMe[indiceMe];
+	tiempoAc = duracionesAc[indiceAc];
+	
+	while (indiceMe < cantidadElementosMe && indiceAc < cantidadElementosAc) {
+		_delay_ms(1);
+		
+		tiempoMe--;
+		tiempoAc--;
+		
+		if (tiempoMe == 0) {
+			indiceMe++;
+			if (indiceMe < cantidadElementosMe) {
+				fijarFrecuenciaMelodia(melodia[indiceMe]);
+				tiempoMe = duracionesMe[indiceMe];
+			}
+		}
+		
+		if (tiempoAc == 0) {
+			indiceAc++;
+			if (indiceAc < cantidadElementosAc) {
+				fijarFrecuenciaAcompanamiento(acompanamiento[indiceAc]);
+				tiempoAc = duracionesAc[indiceAc];
+			}
+		}
+	}
+	
+	apagarBuzzers();
+}
+
+void elegirMusica(char cancion){
+	if (cancion == '1'){
+		reproducirCancion(acompanamiento1, melodia1, duracionesMe1, duracionesAc1, cantidadElementosMe1, cantidadElementosAc1);
+	}
+	if (cancion == '2'){
+		reproducirCancion(acompanamiento2, melodia2, duracionesMe2, duracionesAc2, cantidadElementosMe2, cantidadElementosAc2);
+	}
+	if (cancion == '3') {
+		reproducirCancion(acompanamiento3, melodia3, duracionesMe3, duracionesAc3, cantidadElementosMe3, cantidadElementosAc3);
+	}
+}
 
 int leerBoton(void){
 	int valorBoton = 0; // Ningún botón presionado
 	
-	if (PINB & (1 << PINB0)) {valorBoton = 1;} // DO (262)
-	if (PIND & (1 << PIND2)) {valorBoton = 2;} // RE (294)
-	if (PINB & (1 << PINB2)) {valorBoton = 3;} // MI (330)
-	if (PINB & (1 << PINB3)) {valorBoton = 4;} // FA (349)
-	if (PINB & (1 << PINB4)) {valorBoton = 5;} // SOL (392)
-	if (PINB & (1 << PINB5)) {valorBoton = 6;} // LA (440)
-	if (PIND & (1 << PIND4)) {valorBoton = 7;} // SI (494)
-	if (PIND & (1 << PIND5)) {valorBoton = 8;} // DO ALTO (523)
+	if (PINB & (1 << PINB0)) {valorBoton = 1;} // DO (262)      -> PB0
+	if (PIND & (1 << PIND2)) {valorBoton = 2;} // RE (294)      -> PD2
+	if (PINB & (1 << PINB2)) {valorBoton = 3;} // MI (330)      -> PB2
+	if (PINB & (1 << PINB3)) {valorBoton = 4;} // FA (349)      -> PB3
+	if (PINB & (1 << PINB4)) {valorBoton = 5;} // SOL (392)     -> PB4
+	if (PINB & (1 << PINB5)) {valorBoton = 6;} // LA (440)      -> PB5
+	if (PIND & (1 << PIND4)) {valorBoton = 7;} // SI (494)      -> PD4 (Cambiado desde PB6)
+	if (PIND & (1 << PIND5)) {valorBoton = 8;} // DO ALTO (523) -> PD5 (Cambiado desde PB7)
 	
 	return valorBoton;
 }
 
-void reproducirNotas(int valorBoton);
-	// Si valorBoton == 1 reproduce la frec del do (262)
-	// Si valorBoton == 2 reproduce la frec del re (294)
-	// Si valorBoton == 3 reproduce la frec del mi (330)
-	// Si valorBoton == 4 reproduce la frec del fa (349)
-	// Si valorBoton == 5 reproduce la frec del sol (392)
-	// Si valorBoton == 6 reproduce la frec del la (440)
-	// Si valorBoton == 7 reproduce la frec del si (494)
-	// Si valorBoton == 8 reproduce la frec del do alto (523)
+void mostrarNota(int valorBoton) {
+	if (valorBoton == 1) lcd_write_string("DO");
+	if (valorBoton == 2) lcd_write_string("RE");
+	if (valorBoton == 3) lcd_write_string("MI");
+	if (valorBoton == 4) lcd_write_string("FA");
+	if (valorBoton == 5) lcd_write_string("SOL");
+	if (valorBoton == 6) lcd_write_string("LA");
+	if (valorBoton == 7) lcd_write_string("SI");
+	if (valorBoton == 8) lcd_write_string("DO ALTO");
+}
 
+void reproducirNotas(int valorBoton){
+	if (valorBoton == 1){fijarFrecuenciaMelodia(262);}
+	if (valorBoton == 2){fijarFrecuenciaMelodia(294);}
+	if (valorBoton == 3){fijarFrecuenciaMelodia(330);}
+	if (valorBoton == 4){fijarFrecuenciaMelodia(349);}
+	if (valorBoton == 5){fijarFrecuenciaMelodia(392);}
+	if (valorBoton == 6){fijarFrecuenciaMelodia(440);}
+	if (valorBoton == 7){fijarFrecuenciaMelodia(494);}
+	if (valorBoton == 8){fijarFrecuenciaMelodia(523);}
+}
+
+void modoPiano(void){
+	lcd_clear();
+	lcd_write_string("Modo Piano");
+	escribirUARTString("\r\nM: Volver\r\n");
+	int valorBoton;
 	
-void modoPiano(void);
-	// Muestra en el display "Modo Piano"
 	while(1){
-		// Si desde la PC enviaron 'M' o 'm' para volver al menú sale de modoPiano() y regresa al main()
-		// Llama a leerBoton() para saber que boton se esta apretando
-		// Si se presiona un boton (valorBoton entre 1 y 8)
-			// Llama a reproducirNotas(valorBoton) para reproducir la frecuencia correspondiente
-			// Muestra en el display el nombre de la nota
-		// Si no se presiona ningun boton (valorBoton == 0)
-			// Limpia el display
-			// Apaga los buzzers.
+		if (UCSR0A & (1 << RXC0)) {
+			char dato = UDR0;
+			if (dato == 'M' || dato == 'm') {
+				PORTD &= ~((1 << PD2) | (1 << PD3));
+				TCCR1B = 0;
+				return;
+			}
 		}
-	
 		
-void modoCancion(char cancion);
-	// Llama a elegirMusica(cancion)
-	// Muestra en el display el nombre de la cancion que se está reproduciendo
-	// Al finalizar la canción apaga los buzzers.
+		valorBoton = leerBoton();
+		
+		if (valorBoton > 0 && valorBoton < 9) {
+			lcd_clear();
+			mostrarNota(valorBoton);
+			reproducirNotas(valorBoton);
+		}
+		else {
+			apagarBuzzers();
+		}
+	}
+}
+
+void modoCancion(char cancion){
+	lcd_clear();
+	lcd_write_string("Modo Cancion");
+	lcd_send_command(0xC0);
 	
-int main(void)
-{
+	if (cancion == '1') {
+		lcd_write_string("At Doom's Gate");
+	}
+	if (cancion == '2') {
+		lcd_write_string("El rap de Fernanfloo");
+	}
+	if (cancion == '3') {
+		lcd_write_string("PvZ");
+	}
+	if (cancion == 'M' || cancion == 'm') {
+		PORTD &= ~((1 << PD2) | (1 << PD3));
+		TCCR1B = 0;
+		return;
+	}
+	
+	elegirMusica(cancion);
+	apagarBuzzers();
+}
+
+int main(void) {
 	configurarPuertos();
-	configurarTimer();
-	configurarLCD();
+	configurarTimers();
+	lcd_init();
 	configurarUART();
 
-	while (1)
-	{
-		// Espera a que se seleccione el modo (P/p o C/c)
+	while (1) {
 		char modo = menuModos();
-		// Si modo == 'P' llama a modoPiano();
-		// Si modo == 'C':
-			// Espera que se seleccione la cancion ('1', '2', '3')
+		if (modo == 'P' || modo == 'p') {
+			modoPiano();
+		}
+		if (modo == 'C' || modo == 'c') {
 			char cancion = menuCanciones();
-			// llama a modoCancion y le pasa la canción correspondiente. 
 			modoCancion(cancion);
+		}
 	}
 
 	return 0;
