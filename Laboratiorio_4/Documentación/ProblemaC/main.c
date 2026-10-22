@@ -36,7 +36,7 @@ ESTADOS:
 
 #define REC_GPIO_DELAY 26
 #define SEND_GPIO_DELAY 25.275
-#define LDR_MAX_LIGHT 300
+#define LDR_MAX_LIGHT 600
 
 #define TX PIND0
 #define RX PIND1
@@ -46,12 +46,15 @@ ESTADOS:
 #define LED_ACTIVO PIND5
 
 char estado = 'D';
+char old_estado = 'D';
 char modo = 'M';
 bool presencia = false;
 bool puerta_abierta = false;
 bool old_presencia = false;
 bool old_puerta_abierta = false;
-bool hubo_cambio = true;
+bool sensores_cambio = true;
+bool estado_cambio = true;
+
 void UART_init(void){
 	UBRR0H = (103 >> 8);
 	UBRR0L = 103;
@@ -145,53 +148,82 @@ void procesar_comando(char comando){
 	}
 }
 
+void actualizar_perifericos(void){
+	switch(estado){
+		case 'A':
+			PORTD |= (1 << LED_ACTIVO);
+			PORTD &= ~((1 << LED_ALARMA) | (1 << BUZZER));
+			break;
+		case 'D':
+			PORTD &= ~((1 << LED_ACTIVO) | (1 << LED_ALARMA) | (1 << BUZZER));
+			break;
+		case 'P':
+			PORTD |= ((1 << LED_ACTIVO) | (1 << LED_ALARMA) | (1 << BUZZER));
+			PORTD &= ~(1 << LED_ACTIVO);
+			break;
+		case 'S':
+			PORTD |= (1 << LED_ALARMA);
+			PORTD &= ~((1 << LED_ACTIVO) | (1 << BUZZER));
+			break;
+	}
+}
+
 void revisar_sistema(void){
 	
 	presencia = (PIND & (1 << PIN_PRESENCIA));
 	puerta_abierta = (ADC_read() > LDR_MAX_LIGHT);
-	hubo_cambio = (presencia ^ old_presencia) || (puerta_abierta ^ old_puerta_abierta);
+	sensores_cambio = (presencia != old_presencia) || (puerta_abierta != old_puerta_abierta);
+	estado_cambio = (estado != old_estado);
 	
-	if (modo == 'A' && estado == 'A'){
-		if (puerta_abierta || presencia){
-			estado = 'P';
-			if (puerta_abierta && presencia){
-				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
-			} else if (puerta_abierta){
-				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
-			} else {
-				USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
-			}
-		} else{
-			USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
+	if ((modo == 'A' && estado == 'A') && (puerta_abierta || presencia)){
+		estado = 'P';
+		estado_cambio = true;
+	}
+	
+	if (sensores_cambio || estado_cambio) {
+		switch (estado){
+			case 'P':
+				if (puerta_abierta && presencia){
+					USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
+				} else if (puerta_abierta){
+					USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
+				} else if (presencia){
+					USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
+				} else {
+					USART_SendString(PSTR("ALARMA:ON; ZONA:N/A\r\n"));
+				}
+				break;
+			case 'A':
+				if (puerta_abierta && presencia){
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA/PRESENCIA\r\n"));
+					} else if (puerta_abierta){
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA\r\n"));
+					} else if (presencia){
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:PRESENCIA\r\n"));
+					} else {
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
+				}
+				break;
+			case 'S':
+				if (puerta_abierta && presencia){
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PUERTA/PRESENCIA\r\n"));
+					} else if (puerta_abierta){
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PUERTA\r\n"));
+					} else if (presencia){
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PRESENCIA\r\n"));
+					} else {
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:N/A\r\n"));
+				}
+				break;
+			
 		}
 	}
 	
-	if (modo == 'M'){
-		if (estado == 'P'){
-			if (puerta_abierta && presencia){
-				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
-			} else if (puerta_abierta){
-				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
-			} else if (presencia){
-				USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
-			} else {
-				USART_SendString(PSTR("ALARMA:ON; ZONA:N/A\r\n"));
-			}
-		} else if (estado == 'A'){
-			if (puerta_abierta && presencia){
-				USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA/PRESENCIA\r\n"));
-			} else if (puerta_abierta){
-				USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA\r\n"));
-			} else if (presencia){
-				USART_SendString(PSTR("ALARMA:OFF; ZONA:PRESENCIA\r\n"));
-			} else {
-				USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
-			}
-		}
-	}
+	actualizar_perifericos();
 	
 	old_puerta_abierta = puerta_abierta;
 	old_presencia = presencia;
+	old_estado = estado;
 	
 }
 
@@ -206,5 +238,6 @@ int main(void)
 			procesar_comando(comando);
 		}
 		revisar_sistema();
+		_delay_ms(100);
     }
 }
