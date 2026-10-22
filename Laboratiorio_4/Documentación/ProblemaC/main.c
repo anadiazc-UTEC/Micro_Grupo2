@@ -15,6 +15,16 @@ COMANDOS:
 'F'	Forzar alarma
 'M'	Manual	
 'O' Automatico
+
+MODOS:
+'A'	Auto
+'M' Manual
+
+ESTADOS:
+'A'	Armado
+'D' Desarmado
+'P' Peligro / Alarma activa
+'S' Silenciado
 */
 
 #define F_CPU 16000000UL
@@ -22,17 +32,26 @@ COMANDOS:
 #include <util/delay.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <stdbool.h>
 
 #define REC_GPIO_DELAY 26
 #define SEND_GPIO_DELAY 25.275
+#define LDR_MAX_LIGHT 300
 
 #define TX PIND0
 #define RX PIND1
-#define PRESENCIA PIND2
+#define PIN_PRESENCIA PIND2
 #define BUZZER PIND3
 #define LED_ALARMA PIND4
 #define LED_ACTIVO PIND5
 
+char estado = 'D';
+char modo = 'M';
+bool presencia = false;
+bool puerta_abierta = false;
+bool old_presencia = false;
+bool old_puerta_abierta = false;
+bool hubo_cambio = true;
 void UART_init(void){
 	UBRR0H = (103 >> 8);
 	UBRR0L = 103;
@@ -48,12 +67,12 @@ void ADC_init(void) {
 
 void perifericos_init(void){
 	DDRD |= (1 << BUZZER) | (1 << LED_ALARMA) | (1 << LED_ACTIVO);
-	DDRD &= ~(1 << PRESENCIA);
+	DDRD &= ~(1 << PIN_PRESENCIA);
 	PORTD &= ~((1 << BUZZER) | (1 << LED_ALARMA) | (1 << LED_ACTIVO));
 }
 
 
-char UART_receiveChar(void){
+char UART_receive(void){
 	while (!(UCSR0A & (1 << RXC0)));
 	return UDR0;
 }
@@ -68,6 +87,9 @@ void USART_SendString(const char *str) {
 	while ((c = pgm_read_byte(str++))) {
 		UART_transmit(c);
 	}
+}
+bool UART_pendiente(void) {
+	return (UCSR0A & (1 << RXC0));
 }
 
 uint16_t ADC_read(void) {
@@ -84,11 +106,105 @@ void init_all(void){
 	ADC_init();
 	perifericos_init();
 }
+
+void procesar_comando(char comando){
+	switch (comando){
+		case 'A':		//Armar
+			estado = 'A';
+			USART_SendString(PSTR("Sistema armado.\r\n"));
+			break;
+		case 'D':		//Desarmar
+			estado = 'D';
+			USART_SendString(PSTR("Sistema desarmado.\r\n"));
+			break;
+		case 'S':		//Silenciar
+			if (estado == 'P'){
+				estado = 'S';
+				USART_SendString(PSTR("Alarma silenciada.\r\n"));
+			}else {
+				USART_SendString(PSTR("No esta sonanando la alarma. No se puede silenciar.\r\n"));
+			}
+			break;
+		case 'F':		//Forzar alarma
+			if (modo == 'M'){
+				estado = 'P';
+				USART_SendString(PSTR("Alarma forzada.\r\n"));
+			} else{
+				USART_SendString(PSTR("Modo automatico. No se puede forzar alarma.\r\n"));
+			}
+			break;
+		case 'M':		//Manual
+			modo = 'M';
+			USART_SendString(PSTR("Modo manual activado.\r\n"));
+			break;
+		case 'O':		//Automatico
+			modo = 'A';
+			estado = 'A';
+			USART_SendString(PSTR("Modo automatico activado.\r\n"));
+			break;
+	}
+}
+
+void revisar_sistema(void){
+	
+	presencia = (PIND & (1 << PIN_PRESENCIA));
+	puerta_abierta = (ADC_read() > LDR_MAX_LIGHT);
+	hubo_cambio = (presencia ^ old_presencia) || (puerta_abierta ^ old_puerta_abierta);
+	
+	if (modo == 'A' && estado == 'A'){
+		if (puerta_abierta || presencia){
+			estado = 'P';
+			if (puerta_abierta && presencia){
+				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
+			} else if (puerta_abierta){
+				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
+			} else {
+				USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
+			}
+		} else{
+			USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
+		}
+	}
+	
+	if (modo == 'M'){
+		if (estado == 'P'){
+			if (puerta_abierta && presencia){
+				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
+			} else if (puerta_abierta){
+				USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
+			} else if (presencia){
+				USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
+			} else {
+				USART_SendString(PSTR("ALARMA:ON; ZONA:N/A\r\n"));
+			}
+		} else if (estado == 'A'){
+			if (puerta_abierta && presencia){
+				USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA/PRESENCIA\r\n"));
+			} else if (puerta_abierta){
+				USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA\r\n"));
+			} else if (presencia){
+				USART_SendString(PSTR("ALARMA:OFF; ZONA:PRESENCIA\r\n"));
+			} else {
+				USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
+			}
+		}
+	}
+	
+	old_puerta_abierta = puerta_abierta;
+	old_presencia = presencia;
+	
+}
+
 int main(void)
 {
 	init_all();
+	char comando = ' ';
     while(1)
     {
-		
+		if (UART_pendiente()){
+			comando = UART_receive();
+			procesar_comando(comando);
+		}
+		revisar_sistema();
     }
 }
