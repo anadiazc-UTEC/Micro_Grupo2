@@ -14,7 +14,7 @@ COMANDOS:
 'S'	Silenciar
 'F'	Forzar alarma
 'M'	Manual	
-'O' Automatico
+'O'	Automatico
 
 MODOS:
 'A'	Auto
@@ -52,8 +52,7 @@ bool presencia = false;
 bool puerta_abierta = false;
 bool old_presencia = false;
 bool old_puerta_abierta = false;
-bool sensores_cambio = true;
-bool estado_cambio = true;
+bool hubo_cambio = true;
 
 void UART_init(void){
 	UBRR0H = (103 >> 8);
@@ -108,19 +107,28 @@ void init_all(void){
 	UART_init();
 	ADC_init();
 	perifericos_init();
+	USART_SendString(PSTR("Iniciando sistema.\r\n"));
+	USART_SendString(PSTR("Modo manual activado.\r\n"));
+	USART_SendString(PSTR("Sistema desarmado.\r\n"));
+	USART_SendString(PSTR("A: Armar.\r\n"));
+	USART_SendString(PSTR("D: Desarmar.\r\n"));
+	USART_SendString(PSTR("S: Silenciar.\r\n"));
+	USART_SendString(PSTR("F: Forzar alarma.\r\n"));
+	USART_SendString(PSTR("M: Manual.\r\n"));
+	USART_SendString(PSTR("O: Automatico.\r\n"));
 }
 
 void procesar_comando(char comando){
 	switch (comando){
-		case 'A':		//Armar
+		case 'A':case 'a':		//Armar
 			estado = 'A';
 			USART_SendString(PSTR("Sistema armado.\r\n"));
 			break;
-		case 'D':		//Desarmar
+		case 'D':case 'd':		//Desarmar
 			estado = 'D';
 			USART_SendString(PSTR("Sistema desarmado.\r\n"));
 			break;
-		case 'S':		//Silenciar
+		case 'S':case 's':		//Silenciar
 			if (estado == 'P'){
 				estado = 'S';
 				USART_SendString(PSTR("Alarma silenciada.\r\n"));
@@ -128,7 +136,7 @@ void procesar_comando(char comando){
 				USART_SendString(PSTR("No esta sonanando la alarma. No se puede silenciar.\r\n"));
 			}
 			break;
-		case 'F':		//Forzar alarma
+		case 'F':case 'f':		//Forzar alarma
 			if (modo == 'M'){
 				estado = 'P';
 				USART_SendString(PSTR("Alarma forzada.\r\n"));
@@ -136,11 +144,11 @@ void procesar_comando(char comando){
 				USART_SendString(PSTR("Modo automatico. No se puede forzar alarma.\r\n"));
 			}
 			break;
-		case 'M':		//Manual
+		case 'M':case 'm':		//Manual
 			modo = 'M';
 			USART_SendString(PSTR("Modo manual activado.\r\n"));
 			break;
-		case 'O':		//Automatico
+		case 'O':case 'o':		//Automatico
 			modo = 'A';
 			estado = 'A';
 			USART_SendString(PSTR("Modo automatico activado.\r\n"));
@@ -151,6 +159,17 @@ void procesar_comando(char comando){
 void actualizar_perifericos(void){
 	switch(estado){
 		case 'A':
+			if (hubo_cambio){
+				if (puerta_abierta && presencia){
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA/PRESENCIA\r\n"));
+				} else if (puerta_abierta){
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA\r\n"));
+				} else if (presencia){
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:PRESENCIA\r\n"));
+				} else {
+					USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
+				}
+			}
 			PORTD |= (1 << LED_ACTIVO);
 			PORTD &= ~((1 << LED_ALARMA) | (1 << BUZZER));
 			break;
@@ -158,10 +177,32 @@ void actualizar_perifericos(void){
 			PORTD &= ~((1 << LED_ACTIVO) | (1 << LED_ALARMA) | (1 << BUZZER));
 			break;
 		case 'P':
+			if (hubo_cambio){
+				if (puerta_abierta && presencia){
+					USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
+				} else if (puerta_abierta){
+					USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
+				} else if (presencia){
+					USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
+				} else {
+					USART_SendString(PSTR("ALARMA:ON; ZONA:N/A\r\n"));
+				}
+			}
 			PORTD |= ((1 << LED_ACTIVO) | (1 << LED_ALARMA) | (1 << BUZZER));
 			PORTD &= ~(1 << LED_ACTIVO);
 			break;
 		case 'S':
+			if (hubo_cambio){
+				if (puerta_abierta && presencia){
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PUERTA/PRESENCIA\r\n"));
+				} else if (puerta_abierta){
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PUERTA\r\n"));
+				} else if (presencia){
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PRESENCIA\r\n"));
+				} else {
+					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:N/A\r\n"));
+				}
+			}
 			PORTD |= (1 << LED_ALARMA);
 			PORTD &= ~((1 << LED_ACTIVO) | (1 << BUZZER));
 			break;
@@ -172,51 +213,11 @@ void revisar_sistema(void){
 	
 	presencia = (PIND & (1 << PIN_PRESENCIA));
 	puerta_abierta = (ADC_read() > LDR_MAX_LIGHT);
-	sensores_cambio = (presencia != old_presencia) || (puerta_abierta != old_puerta_abierta);
-	estado_cambio = (estado != old_estado);
+	hubo_cambio = (presencia != old_presencia) || (puerta_abierta != old_puerta_abierta) || (estado != old_estado);
 	
 	if ((modo == 'A' && estado == 'A') && (puerta_abierta || presencia)){
 		estado = 'P';
-		estado_cambio = true;
-	}
-	
-	if (sensores_cambio || estado_cambio) {
-		switch (estado){
-			case 'P':
-				if (puerta_abierta && presencia){
-					USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA/PRESENCIA\r\n"));
-				} else if (puerta_abierta){
-					USART_SendString(PSTR("ALARMA:ON; ZONA:PUERTA\r\n"));
-				} else if (presencia){
-					USART_SendString(PSTR("ALARMA:ON; ZONA:PRESENCIA\r\n"));
-				} else {
-					USART_SendString(PSTR("ALARMA:ON; ZONA:N/A\r\n"));
-				}
-				break;
-			case 'A':
-				if (puerta_abierta && presencia){
-					USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA/PRESENCIA\r\n"));
-					} else if (puerta_abierta){
-					USART_SendString(PSTR("ALARMA:OFF; ZONA:PUERTA\r\n"));
-					} else if (presencia){
-					USART_SendString(PSTR("ALARMA:OFF; ZONA:PRESENCIA\r\n"));
-					} else {
-					USART_SendString(PSTR("ALARMA:OFF; ZONA:N/A\r\n"));
-				}
-				break;
-			case 'S':
-				if (puerta_abierta && presencia){
-					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PUERTA/PRESENCIA\r\n"));
-					} else if (puerta_abierta){
-					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PUERTA\r\n"));
-					} else if (presencia){
-					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:PRESENCIA\r\n"));
-					} else {
-					USART_SendString(PSTR("ALARMA:SILENCIADO; ZONA:N/A\r\n"));
-				}
-				break;
-			
-		}
+		hubo_cambio = true;
 	}
 	
 	actualizar_perifericos();
