@@ -3,6 +3,7 @@
 #include <util/delay.h>
 #include <stdio.h>
 #include <avr/interrupt.h>
+#include <stdbool.h>
 #include <xc.h>
 
 #define BOTON_PIN	PIND2
@@ -10,15 +11,32 @@
 #define LDR_PIN		PINC0
 #define POT_PIN		PINC1
 #define LDR_UMBRAL	400
-#define TEMP_UMBRAL	0
+#define TEMP_UMBRAL	45
 #define MS_PISTON	1000
 #define PCF8574		0x27
+#define ACK_OK		0x06
+#define ACK_ERR		0x15
 
 #define CMD_STOP			0x00
 #define CMD_START			0x01
 #define CMD_SET_VELOCIDAD	0x02
 #define CMD_SET_PISTON		0x03
 #define CMD_EMERGENCIA		0x04
+
+static volatile uint32_t ms_trans = 0;				// milisegundos transcurridos
+static volatile uint32_t ms_trans_btn = 0;			// milisegundos transcurridos al momento de que se apreto el boton
+static volatile uint32_t ms_piston_activado = 0;	// milisegundos transcurridos al momento de activar el piston
+static volatile uint32_t ms_lcd = 0;				// milisegundos transcurridos al momento de acutalizar el lcd
+
+static volatile bool boton_presionado = false;
+
+static bool hay_objeto = false;
+static bool ack_error = false;
+
+static uint16_t cant_piezas = 0x0000;
+static uint8_t temp_actual = 0x00;
+static uint8_t pwm_actual = 0x00;
+static uint8_t pwm_nuevo = 0x00;
 
 static void st_detenido(void);
 static void st_detectar(void);
@@ -27,13 +45,16 @@ static void st_emergencia(void);
 
 static void (*estado)(void);
 
-static void st_detenido(void) {}
+void timer0_init(void) {
+	TCCR0A	= (1 << WGM01);
+	OCR0A	= 249;
+	TIMSK0	|= (1 << OCIE0A);
+	TCCR0B	= (1 << CS01) | (1 << CS00);
+}
 
-static void st_detectar(void) {}
-
-static void st_piston(void) {}
-
-static void st_emergencia(void) {}
+ISR(TIMER0_COMPA_vect) {
+	ms_trans++;
+}
 
 void external_int0_init(void) {
 	EICRA	|= (1 << ISC01);
@@ -41,11 +62,25 @@ void external_int0_init(void) {
 	EIMSK	|= (1 << INT0);
 }
 
-
+ISR(INT0_vect) {
+	if (ms_trans - ms_trans_btn > 12) {
+		boton_presionado = true;
+		ms_trans_btn = ms_trans;
+	}
+}
 
 void ADC_init(void) {
 	ADMUX	|= (1 << REFS0);
 	ADCSRA	|= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+}
+
+uint16_t ADC_read(uint8_t puerto) {
+
+	ADMUX = (ADMUX & 0xF0) | (puerto & 0x0F);
+	ADCSRA |= (1 << ADSC);
+	while (ADCSRA & (1 << ADSC));
+
+	return ADC;
 }
 
 void I2C_init(void) {
@@ -82,6 +117,7 @@ void LCD_send_byte(uint8_t byte, uint8_t rs) {
 	LCD_send_nibble(byte & 0xF0, rs);
 	LCD_send_nibble((byte << 4) & 0xF0, rs);
 }
+
 void LCD_command(uint8_t cmd) {
 	LCD_send_byte(cmd, 0);
 	_delay_ms(2);
@@ -91,6 +127,7 @@ void LCD_data(char data) {
 	LCD_send_byte(data, 1);
 	_delay_us(50);
 }
+
 void LCD_init(void){
 	I2C_init();
 	_delay_ms(50);
@@ -110,6 +147,35 @@ void LCD_init(void){
 	LCD_command(0x06);
 }
 
+void LCD_send_string(const char *str, const char *str2) {
+	LCD_command(0x01);
+	LCD_command(0x80);
+	while (*str) {
+		LCD_data(*str++);
+	}
+	LCD_command(0xC0);
+	while (*str2) {
+		LCD_data(*str2++);
+	}
+}
+
+void actualizar_lcd(void) {
+	char str[17];
+	snprintf(str, sizeof(str), "P:%02d T:%02dC V:%03d", cant_piezas, temp_actual, pwm_actual);
+	
+	if (ack_error) {
+		LCD_send_string("ERRor: SPI ACK", str);
+	} else if (estado == st_detenido) {
+		LCD_send_string("ESTADO: STOP", str);
+	} else if (estado == st_detectar) {
+		LCD_send_string("ESTADO: MARCHA", str);
+	} else if (estado == st_piston) {
+		LCD_send_string("ESTADO: PISTON", str);
+	} else if (estado == st_emergencia) {
+		LCD_send_string("ESTADO: EMERGENCIA", str);
+	}
+}
+
 void spi_init(void) {
 	DDRB	|= (1<<PINB2)|(1<<PINB3)|(1<<PINB5);
 	DDRB	&= ~(1<<PINB4);
@@ -117,7 +183,7 @@ void spi_init(void) {
 	SPCR	= (1<<SPE) | (1<<MSTR) |(1 << SPR0);
 }
 
-uint8_t spi_transfer(uint8_t comando, uint8_t valor) {
+void spi_transfer(uint8_t comando, uint8_t valor) {
 	PORTB &= ~(1 << PINB2);
 	
 	SPDR = comando;
@@ -131,10 +197,43 @@ uint8_t spi_transfer(uint8_t comando, uint8_t valor) {
 	SPDR = 0x00;
 	while(!(SPSR & (1<<SPIF)));
 	
-	uint8_t res = SPDR;
+	ack_error = (ACK_ERR == SPDR);
 	PORTB |= (1 << PINB2);
 	
-	return res;
+}
+
+bool dht11_read(uint8_t *temp) {
+	
+	uint8_t data[5] = {0};
+	
+	DDRD |= (1 << DHT11_PIN);
+	PORTD &= ~(1 << DHT11_PIN);
+	_delay_ms(18);
+	PORTD |= (1 << DHT11_PIN);
+	_delay_us(30);
+	DDRD &= ~(1 << DHT11_PIN);
+	
+	if (PIND & (1 << DHT11_PIN)) {
+		return true;
+	}
+	
+	while (!(PIND & (1 << DHT11_PIN)));
+	while (PIND & (1 << DHT11_PIN));
+
+	for (uint8_t j = 0; j < 40; j++) {
+		while (!(PIND & (1 << DHT11_PIN)));
+		_delay_us(30);
+		if (PIND & (1 << DHT11_PIN)) {
+			data[j / 8] |= (1 << (7 - (j % 8)));
+		}
+		while (PIND & (1 << DHT11_PIN));
+	}
+	
+	if ((data[0] + data[1] + data[2] + data[3]) == data[4]) {
+		*temp = data[2];
+		return false;
+	}
+	return true;
 }
 
 void init_all(void){
@@ -143,6 +242,7 @@ void init_all(void){
 	PORTD	|= (1 << BOTON_PIN);
 	
 	external_int0_init();
+	timer0_init();
 	ADC_init();
 	LCD_init();
 	spi_init();
@@ -153,13 +253,93 @@ void init_all(void){
 	
 }
 
+static void st_detenido(void) {
+	if (boton_presionado) {
+		boton_presionado = false;
+		pwm_actual = pwm_nuevo;
+		spi_transfer(CMD_START, 0x00);
+		spi_transfer(CMD_SET_VELOCIDAD, pwm_actual);
+		estado = st_detectar;
+	}
+}
+
+static void st_detectar(void) {
+	
+	if (temp_actual > TEMP_UMBRAL) {
+		spi_transfer(CMD_EMERGENCIA, temp_actual);
+		estado = st_emergencia;
+		return;
+	}
+	
+	if (pwm_nuevo != pwm_actual) {
+		pwm_actual = pwm_nuevo;
+		spi_transfer(CMD_SET_VELOCIDAD, pwm_actual);
+	}
+	
+	if (boton_presionado) {
+		boton_presionado = false;
+		spi_transfer(CMD_STOP, 0);
+		estado = st_detenido;
+		return;
+	}
+
+	if (hay_objeto) {
+		cant_piezas++;
+		spi_transfer(CMD_SET_PISTON, 1);
+		ms_piston_activado = ms_trans;
+		estado = st_piston;
+	}
+}
+
+static void st_piston(void) {
+	
+	if (temp_actual > TEMP_UMBRAL) {
+		spi_transfer(CMD_EMERGENCIA, temp_actual);
+		estado = st_emergencia;
+		return;
+	}
+	
+	if (ms_trans - ms_piston_activado >= MS_PISTON) {
+		spi_transfer(CMD_SET_PISTON, 0);
+		estado = st_detectar;
+	}
+	
+}
+
+static void st_emergencia(void) {
+	if (temp_actual <= TEMP_UMBRAL && boton_presionado) {
+		boton_presionado = false;
+		spi_transfer(CMD_STOP, 0);
+		estado = st_detenido;
+	}
+}
+
 int main(void)
 {
 	init_all();
+	
+	uint16_t adc_pot = 0x0000;
+	uint16_t adc_ldr = 0x0000;
+	uint8_t temp_lectura = 0x00;
+	
     while(1)
     {
+		adc_pot = ADC_read(POT_PIN);
+		pwm_nuevo = (adc_pot >> 2);
+		
+		adc_ldr = ADC_read(LDR_PIN);
+		hay_objeto = (adc_ldr >= LDR_UMBRAL);
+		
+		if (dht11_read(&temp_lectura)) {
+			temp_actual = temp_lectura;
+		}
+		
 		estado();
 		
+		if (ms_trans - ms_lcd >= 100) {
+			ms_lcd = ms_trans;
+			actualizar_lcd();
+		}
     }
 	return 0;
 }
