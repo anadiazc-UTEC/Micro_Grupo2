@@ -201,3 +201,123 @@ void activar_bloqueo_buzzer(void) {
     _delay_ms(3000);
     PORTD &= ~((1<<LED_RED_PIN) | (1<<BUZZER_PIN));
 }
+
+int main(void) {
+    spi_init();
+    mfrc522_init();
+    lcd_init();
+    keypad_init();
+
+    DDRD |= (1<<LED_GREEN_PIN) | (1<<LED_RED_PIN) | (1<<BUZZER_PIN);
+
+    uint8_t flag = eeprom_read_byte(&eeprom_flag_inicializada);
+    if (flag != EEPROM_LLAVE) {
+        Cuenta cuentas_iniciales[3] = {
+            {{0xC3, 0x10, 0x36, 0x16}, "1234", 5000},
+            {{0xC3, 0x27, 0xFC, 0x28}, "5678", 1500},
+            {{0xA1, 0x14, 0x4C, 0x1C}, "4321", 3000}
+        };
+        eeprom_update_block(&cuentas_iniciales, &cuentas_guardadas, sizeof(cuentas_iniciales));
+        eeprom_write_byte(&eeprom_flag_inicializada, EEPROM_LLAVE);
+    }
+
+    uint8_t uid_leido[5];
+    char entrada_texto[10];
+    uint8_t intentos_pin = 0;
+    Cuenta cuenta_actual;
+
+    while (1) {
+        if (estado_actual != estado_anterior) {
+            lcd_clear();
+            if (estado_actual == ESTADO_ESPERANDO_TARJETA) {
+                lcd_gotoxy(0, 0);
+                lcd_print("  CAJERO ATM  ");
+                lcd_gotoxy(0, 1);
+                lcd_print("Acerque Tarjeta");
+            } else if (estado_actual == ESTADO_INGRESO_PIN) {
+                lcd_gotoxy(0, 0);
+                lcd_print("Ingrese PIN (=):");
+            } else if (estado_actual == ESTADO_MENU_PRINCIPAL) {
+                lcd_gotoxy(0, 0);
+                lcd_print("1:Saldo 2:Retiro");
+                lcd_gotoxy(0, 1);
+                lcd_print("3:Dep  4:Salir");
+            }
+            estado_anterior = estado_actual;
+        }
+
+        switch (estado_actual) {
+            case ESTADO_ESPERANDO_TARJETA:
+            {
+                uint8_t status;
+                uint8_t str[MAX_LEN];
+
+                status = mfrc522_request(PICC_REQIDL, str);
+                if (status == STATUS_OK) {
+                    status = mfrc522_get_card_id(uid_leido);
+                    if (status == STATUS_OK) {
+                        uint8_t encontrada = 0;
+
+                        for (uint8_t i = 0; i < 3; i++) {
+                            Cuenta temp;
+                            eeprom_read_block(&temp, &cuentas_guardadas[i], sizeof(Cuenta));
+                            if (memcmp(uid_leido, temp.uid, 4) == 0) {
+                                cuenta_actual_index = i;
+                                encontrada = 1;
+                                break;
+                            }
+                        }
+
+                        if (encontrada) {
+                            activar_exito();
+                            intentos_pin = 0;
+                            estado_actual = ESTADO_INGRESO_PIN;
+                        } else {
+                            lcd_clear();
+                            lcd_gotoxy(0, 0);
+                            lcd_print("  Tarjeta No");
+                            lcd_gotoxy(0, 1);
+                            lcd_print("  Registrada!");
+                            activar_error();
+                            estado_anterior = (EstadoCajero)-1;
+                        }
+                    }
+                }
+            }
+            break;
+
+            case ESTADO_INGRESO_PIN:
+            keypad_read_string(entrada_texto, 4, 0);
+            eeprom_read_block(&cuenta_actual, &cuentas_guardadas[cuenta_actual_index], sizeof(Cuenta));
+            if (strcmp(entrada_texto, cuenta_actual.pin) == 0) {
+                activar_exito();
+                estado_actual = ESTADO_MENU_PRINCIPAL;
+            } else {
+                intentos_pin++;
+                if (intentos_pin >= 3) {
+                    lcd_clear();
+                    lcd_gotoxy(0, 0);
+                    lcd_print("Intentos Maximos");
+                    lcd_gotoxy(0, 1);
+                    lcd_print("   Bloqueado!");
+                    activar_bloqueo_buzzer();
+                    estado_actual = ESTADO_ESPERANDO_TARJETA;
+                } else {
+                    lcd_clear();
+                    lcd_gotoxy(0, 0);
+                    lcd_print("PIN Incorrecto!");
+                    activar_error();
+                    estado_anterior = (EstadoCajero)-1;
+                }
+            }
+            break;
+
+            case ESTADO_MENU_PRINCIPAL:
+            case ESTADO_SALDO:
+            case ESTADO_RETIRO:
+            case ESTADO_DEPOSITO:
+            break;
+        }
+    }
+    return 0;
+}
