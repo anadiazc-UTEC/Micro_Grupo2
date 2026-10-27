@@ -315,3 +315,181 @@ uint16_t adc_read(uint8_t channel) {
 
 	return ADC;
 }
+
+int leerDireccionJoystick(void) {
+	uint16_t valorX = adc_read(0);
+	uint16_t valorY = adc_read(1);
+
+	if (valorY > ALTO) return 0; // Arriba
+	if (valorY < BAJO) return 1; // Abajo
+	if (valorX < BAJO) return 2; // Izquierda
+	if (valorX > ALTO) return 3; // Derecha
+
+	return -1;
+}
+
+int leerColorUsuario(void) {
+	int colorSeleccionado = -1;
+	int direccionActual;
+
+	while (1) {
+		direccionActual = leerDireccionJoystick();
+
+		if (direccionActual != -1 && direccionActual != colorSeleccionado) {
+			colorSeleccionado = direccionActual;
+			prenderColor(colorSeleccionado);
+		}
+
+		if (!(PIND & (1 << PD2))) {
+			_delay_ms(30);
+
+			if (!(PIND & (1 << PD2))) {
+				if (colorSeleccionado != -1) {
+					while (!(PIND & (1 << PD2))) {
+						_delay_ms(10);
+					}
+
+					_delay_ms(30);
+					sonarColor(colorSeleccionado);
+					_delay_ms(150);
+					apagarBuzzers();
+					limpiarMatriz();
+
+					return colorSeleccionado;
+				}
+			}
+		}
+	}
+}
+
+int decidirColor(void) {
+	return rand() % 4;
+}
+
+void perder(void) {
+	for (int i = 0; i < 4; i++) {
+		fijarFrecuenciaMelodia(150);
+		prenderColor(3);
+		_delay_ms(150);
+		apagarBuzzers();
+		limpiarMatriz();
+		_delay_ms(150);
+	}
+}
+
+void acertar(void) {
+	fijarFrecuenciaMelodia(523);
+	_delay_ms(100);
+	fijarFrecuenciaMelodia(659);
+	_delay_ms(150);
+	apagarBuzzers();
+	_delay_ms(200);
+}
+
+void rondaUno(void) {
+	fijarFrecuenciaMelodia(262);
+	_delay_ms(100);
+	fijarFrecuenciaMelodia(330);
+	_delay_ms(100);
+	fijarFrecuenciaMelodia(392);
+	_delay_ms(100);
+	fijarFrecuenciaMelodia(523);
+	_delay_ms(200);
+	apagarBuzzers();
+	_delay_ms(300);
+}
+
+void rondaFinal(void) {
+	fijarFrecuenciaMelodia(880);
+	_delay_ms(150);
+	apagarBuzzers();
+	_delay_ms(100);
+	fijarFrecuenciaMelodia(880);
+	_delay_ms(150);
+	apagarBuzzers();
+}
+
+void ganar(void) {
+	uint16_t notas[] = {262, 330, 392, 523, 659, 784};
+
+	for (int i = 0; i < 6; i++) {
+		fijarFrecuenciaMelodia(notas[i]);
+		prenderColor(i % 4);
+		_delay_ms(120);
+	}
+
+	apagarBuzzers();
+	limpiarMatriz();
+}
+
+/* Arriba, Arriba, Abajo, Abajo, Izquierda, Derecha */
+const uint8_t codigoKonami[6] = {1, 1, 0, 0, 2, 3};
+
+void modoLibre(uint8_t *cursorX, uint8_t *cursorY, uint8_t *colorCursor) {
+	mostrarCursor(*cursorX, *cursorY, *colorCursor);
+	uint8_t progresocodigo = 0;
+
+	while (1) {
+		int dir = leerDireccionJoystick();
+
+		if (dir != -1) {
+			if (dir == 0 && *cursorY > 0) (*cursorY)--;
+			if (dir == 1 && *cursorY < 7) (*cursorY)++;
+			if (dir == 2 && *cursorX > 0) (*cursorX)--;
+			if (dir == 3 && *cursorX < 7) (*cursorX)++;
+
+			mostrarCursor(*cursorX, *cursorY, *colorCursor);
+
+			if (dir == codigoKonami[progresocodigo]) {
+				progresocodigo++;
+
+				if (progresocodigo == 6) {
+					fijarFrecuenciaMelodia(523);
+					_delay_ms(100);
+					fijarFrecuenciaMelodia(659);
+					_delay_ms(100);
+					fijarFrecuenciaMelodia(784);
+					_delay_ms(150);
+					apagarBuzzers();
+					limpiarMatriz();
+					return;
+				}
+			} else {
+				if (dir == codigoKonami[0]) {
+					progresocodigo = 1;
+				} else {
+					progresocodigo = 0;
+				}
+			}
+
+			_delay_ms(150);
+
+			while (leerDireccionJoystick() != -1) {
+				_delay_ms(5);
+			}
+		}
+
+		if (!(PIND & (1 << PD2))) {
+			_delay_ms(30);
+
+			if (!(PIND & (1 << PD2))) {
+				while (!(PIND & (1 << PD2))) {
+					_delay_ms(5);
+				}
+
+				_delay_ms(30);
+
+				uint8_t nuevoColor;
+				do {
+					nuevoColor = rand() % 4;
+				} while (nuevoColor == *colorCursor);
+
+				*colorCursor = nuevoColor;
+				mostrarCursor(*cursorX, *cursorY, *colorCursor);
+				sonarColor(*colorCursor);
+				_delay_ms(150);
+				apagarBuzzers();
+			}
+		}
+	}
+}
