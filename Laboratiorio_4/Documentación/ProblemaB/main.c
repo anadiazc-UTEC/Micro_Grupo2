@@ -10,8 +10,8 @@
 #define DHT11_PIN	PIND3
 #define LDR_PIN		PINC0
 #define POT_PIN		PINC1
-#define LDR_UMBRAL	200
-#define TEMP_UMBRAL	24
+#define LDR_UMBRAL	500
+#define TEMP_UMBRAL	25
 #define MS_PISTON	1000
 #define PCF8574		0x27
 #define ACK_OK		0x06
@@ -46,22 +46,24 @@ static void st_emergencia(void);
 static void (*estado)(void);
 
 void timer0_init(void) {
-	TCCR0A	= (1 << WGM01);
-	OCR0A	= 249;
-	TIMSK0	|= (1 << OCIE0A);
-	TCCR0B	= (1 << CS01) | (1 << CS00);
+	TCCR0A	= (1 << WGM01);				//modo CTC
+	OCR0A	= 249;						//prescaler de 64 (16MHz / (64 * (249 + 1)) = 1000Hz)
+	TIMSK0	|= (1 << OCIE0A);			//Habilita la interrupcion por comparacion A del Timer 0
+	TCCR0B	= (1 << CS01) | (1 << CS00);//prescaler a 64
 }
 
+//interrupcion del timer
 ISR(TIMER0_COMPA_vect) {
 	ms_trans++;
 }
 
 void external_int0_init(void) {
-	EICRA	|= (1 << ISC01);
-	EICRA	&= ~(1 << ISC00);
-	EIMSK	|= (1 << INT0);
+	EICRA	|= (1 << ISC01);	//configura INT0 para dispararse por flanco de bajada
+	EICRA	&= ~(1 << ISC00);	
+	EIMSK	|= (1 << INT0);		//habilita interrupcion externa 
 }
 
+//interrupcion del boton
 ISR(INT0_vect) {
 	if (ms_trans - ms_trans_btn > 200 && !(PIND & (1 << BOTON_PIN))) {
 		boton_presionado = true;
@@ -70,15 +72,15 @@ ISR(INT0_vect) {
 }
 
 void ADC_init(void) {
-	ADMUX	|= (1 << REFS0);
-	ADCSRA	|= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+	ADMUX	|= (1 << REFS0);	// voltaje de referencia con capacitor AREF
+	ADCSRA	|= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); //habilita ADC con preescaler 128
 }
 
 uint16_t ADC_read(uint8_t puerto) {
 
-	ADMUX = (ADMUX & 0xF0) | (puerto & 0x0F);
-	ADCSRA |= (1 << ADSC);
-	while (ADCSRA & (1 << ADSC));
+	ADMUX = (ADMUX & 0xF0) | (puerto & 0x0F);	//selecciona que pin leer
+	ADCSRA |= (1 << ADSC);						//inicia nueva lectura
+	while (ADCSRA & (1 << ADSC));				//espera hasta tener lectura
 
 	return ADC;
 }
@@ -88,21 +90,25 @@ void I2C_init(void) {
 	TWSR = 0x00;
 }
 
+//inicia comunicacion i2c
 void I2C_start(void) {
-	TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
+	TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);	
 	while (!(TWCR & (1 << TWINT)));
 }
 
+//envia datos por i2c
 void I2C_write(uint8_t data) {
 	TWDR = data;
 	TWCR = (1 << TWINT) | (1 << TWEN);
 	while (!(TWCR & (1 << TWINT)));
 }
 
+//finaliza comunicacion idc
 void I2C_stop(void) {
 	TWCR = (1 << TWINT) | (1 << TWSTO) | (1 << TWEN);
 }
 
+//manda medio byte al lcd, por usar 4 pines en i2c
 void LCD_send_nibble(uint8_t nibble, uint8_t rs) {
 	
 	uint8_t data = nibble | rs | 0x08;
@@ -113,6 +119,7 @@ void LCD_send_nibble(uint8_t nibble, uint8_t rs) {
 	I2C_stop();
 }
 
+//envia un byte al lcd
 void LCD_send_byte(uint8_t byte, uint8_t rs) {
 	LCD_send_nibble(byte & 0xF0, rs);
 	LCD_send_nibble((byte << 4) & 0xF0, rs);
@@ -177,10 +184,10 @@ void actualizar_lcd(void) {
 }
 
 void spi_init(void) {
-	DDRB	|= (1<<PINB2)|(1<<PINB3)|(1<<PINB5);
-	DDRB	&= ~(1<<PINB4);
-	PORTB	|= (1 << PINB2);
-	SPCR	= (1<<SPE) | (1<<MSTR) |(1 << SPR0);
+	DDRB	|= (1<<PINB2)|(1<<PINB3)|(1<<PINB5); //configura SS, MOSI, SCK 
+	DDRB	&= ~(1<<PINB4); //configura MISO
+	PORTB	|= (1 << PINB2); //deselecciona esclavo
+	SPCR	= (1<<SPE) | (1<<MSTR) |(1 << SPR0); //marca como maestro, configura la velocidad y habilita la comunicacion
 }
 
 void spi_transfer(uint8_t comando, uint8_t valor) {
@@ -205,7 +212,6 @@ void spi_transfer(uint8_t comando, uint8_t valor) {
 bool dht11_read(uint8_t *temp) {
 	
 	uint8_t data[5] = {0};
-		uint8_t i, j;
 	uint16_t timeout;
 	
 	DDRD |= (1 << DHT11_PIN);
@@ -215,22 +221,22 @@ bool dht11_read(uint8_t *temp) {
 	_delay_us(30);
 	DDRD &= ~(1 << DHT11_PIN);
 	
-	timeout = 10000;
+	timeout = 1000;
 	while (PIND & (1 << DHT11_PIN)) if (--timeout == 0) return false;
-	timeout = 10000;
+	timeout = 1000;
 	while (!(PIND & (1 << DHT11_PIN))) if (--timeout == 0) return false;
-	timeout = 10000;
+	timeout = 1000;
 	while (PIND & (1 << DHT11_PIN)) if (--timeout == 0) return false;
 
-	for (j = 0; j < 5; j++) {
-		for (i = 0; i < 8; i++) {
-			timeout = 10000;
+	for (uint8_t j = 0; j < 5; j++) {
+		for (uint8_t i = 0; i < 8; i++) {
+			timeout = 1000;
 			while (!(PIND & (1 << DHT11_PIN))) if (--timeout == 0) return false;
 			_delay_us(30);
 			if (PIND & (1 << DHT11_PIN)) {
 				data[j] |= (1 << (7 - i));
 			}
-			timeout = 10000;
+			timeout = 1000;
 			while (PIND & (1 << DHT11_PIN)) if (--timeout == 0) return false;
 		}
 	}
@@ -262,10 +268,15 @@ void init_all(void){
 static void st_detenido(void) {
 	if (boton_presionado) {
 		boton_presionado = false;
-		pwm_actual = pwm_nuevo;
-		spi_transfer(CMD_START, 0x00);
-		spi_transfer(CMD_SET_VELOCIDAD, pwm_actual);
-		estado = st_detectar;
+		if (temp_actual > TEMP_UMBRAL) {
+			spi_transfer(CMD_EMERGENCIA, temp_actual);
+			estado = st_emergencia;
+		} else {
+			pwm_actual = pwm_nuevo;
+			spi_transfer(CMD_START, 0x00);
+			spi_transfer(CMD_SET_VELOCIDAD, pwm_actual);
+			estado = st_detectar;
+		}
 	}
 }
 
@@ -313,7 +324,7 @@ static void st_piston(void) {
 }
 
 static void st_emergencia(void) {
-	if (temp_actual <= TEMP_UMBRAL && boton_presionado) {
+	if (boton_presionado) {
 		boton_presionado = false;
 		spi_transfer(CMD_STOP, 0);
 		estado = st_detenido;

@@ -29,9 +29,9 @@ volatile bool nuevo_comando = true;
 
 void servo_init(void) {
 	DDRB |= (1 << PINB1);
-	TCCR1A = (1 << COM1A1) | (1 << WGM11);
-	TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11);
-	ICR1 = 39999;
+	TCCR1A = (1 << COM1A1) | (1 << WGM11); //modo fast pwm
+	TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11); //prescaler 8 
+	ICR1 = 39999;//pwm a 20ms 
 }
 
 void mover_servo_grados(uint16_t angulo) {
@@ -49,9 +49,9 @@ void timer0_pwm_init(void) {
 }
 
 void spi_init(void) {
-	DDRB |= (1 << PINB4);
-	DDRB &= ~((1 << PINB2) | (1 << PINB3) | (1 << PINB5));
-	SPCR = (1 << SPE) | (1 << SPIE);
+	DDRB |= (1 << PINB4); //configura MISO
+	DDRB &= ~((1 << PINB2) | (1 << PINB3) | (1 << PINB5));  //configura SS, MOSI, SCK 
+	SPCR = (1 << SPE) | (1 << SPIE); //configura la velocidad y habilita la comunicacion
 	SPDR = 0x00;
 }
 
@@ -84,7 +84,7 @@ ISR(SPI_STC_vect) {
 	}
 }
 
-void establecer_motor(uint8_t enable, uint8_t velocidad) {
+void establecer_motor(bool enable, uint8_t velocidad) {
 	if (enable) {
 		PORTD |= (1 << MOTOR_IN1);
 		PORTB &= ~(1 << MOTOR_IN2);
@@ -123,7 +123,7 @@ int main(void)
 			switch (comando){
 				case CMD_STOP:
 					emergencia = false;
-					establecer_motor(0, 0);
+					establecer_motor(false, 0);
 					mover_servo_grados(0);
 					PORTD &= ~((1 << LED_VERDE) | (1 << BUZZER) | (1 << LED_ROJO));
 					break;
@@ -131,7 +131,7 @@ int main(void)
 					emergencia = false;
 					PORTD |= (1 << LED_VERDE);
 					PORTD &= ~((1 << LED_ROJO) | (1 << BUZZER));
-					establecer_motor(1, OCR0A);
+					establecer_motor(true, OCR0A);
 					break;
 				case CMD_SET_PISTON:
 					if (!emergencia){
@@ -145,7 +145,7 @@ int main(void)
 					break;
 				case CMD_EMERGENCIA:
 					emergencia = true;
-					establecer_motor(0, 0);
+					establecer_motor(false, 0);
 					mover_servo_grados(0);
 					PORTD &= ~(1 << LED_VERDE);
 					break;
