@@ -22,9 +22,27 @@
 uint8_t leds[NUM_LEDS][3];
 
 float accelXRaw, accelYRaw, accelZRaw;
+float rollMedido = 0.0f, pitchMedido = 0.0f;
+float rollFiltrado = 0.0f, pitchFiltrado = 0.0f;
 
 float offsetRoll = 0.0f;
 float offsetPitch = 0.0f;
+
+int8_t posX = 3;
+int8_t posY = 3;
+uint8_t modoHoldActivo = 0;
+uint8_t toqueLimiteActivo = 0;
+
+uint8_t colorBurbuja = 0;
+
+//estados del sistema
+typedef enum {
+	EST_INICIALIZACION,
+	EST_LECTURA_SENSOR,
+	EST_PROCESAMIENTO,
+	EST_MODO_HOLD,
+	EST_CALIBRACION
+} EstadoSistema;
 
 //configuracion del puerto serial uart
 void uart_init(unsigned int ubrr) {
@@ -325,18 +343,192 @@ void guardarEEPROM(float offX, float offY) {
 	);
 }
 
+//bucle principal y ejecución de la máquina de estados
 int main(void) {
-	configurarPuertos();
-	configurarTimers();
-	uart_init(103);
-	i2cInit();
-	mpu6050Init();
-	inicializarMatriz();
-	limpiarMatriz();
-	cargarEEPROM();
+	EstadoSistema estado = EST_INICIALIZACION;
+	uint8_t btnHoldPresionado = 0;
+	uint8_t btnCalPresionado = 0;
 
 	while (1) {
-		_delay_ms(100);
+		switch (estado) {
+			case EST_INICIALIZACION:
+			//configurar sistema y eeprom
+			configurarPuertos();
+			configurarTimers();
+			uart_init(103);
+			i2cInit();
+			mpu6050Init();
+			inicializarMatriz();
+			limpiarMatriz();
+			cargarEEPROM();
+			uart_print("\r\n--- BURBUJA DE INCLINACION ---\r\n");
+			uart_print("Sistema iniciado correctamente.\r\n");
+			
+			//transición: sistema inicializando -> lectura sensor
+			estado = EST_LECTURA_SENSOR;
+			break;
+
+			case EST_LECTURA_SENSOR:
+			//evaluar botones
+			if (!(PIND & (1 << PD2))) {
+				if (!btnHoldPresionado) {
+					_delay_ms(20);
+					if (!(PIND & (1 << PD2))) {
+						btnHoldPresionado = 1;
+						modoHoldActivo = !modoHoldActivo;
+						if (modoHoldActivo) {
+							uart_print("[MODO HOLD: ACTIVADO]\r\n");
+							} else {
+							uart_print("[MODO HOLD: DESACTIVADO]\r\n");
+						}
+					}
+				}
+				} else {
+				btnHoldPresionado = 0;
+			}
+
+			if (!(PIND & (1 << PD3))) {
+				if (!btnCalPresionado) {
+					_delay_ms(20);
+					if (!(PIND & (1 << PD3))) {
+						btnCalPresionado = 1;
+						//transición: boton calibrar -> calibracion
+						estado = EST_CALIBRACION;
+						break;
+					}
+				}
+				} else {
+				btnCalPresionado = 0;
+			}
+
+			//transiciones según banderas de evaluación de botones
+			if (modoHoldActivo) {
+				//transición: boton hold -> modo hold
+				estado = EST_MODO_HOLD;
+				} else {
+				//leer datos del sensor mpu6050
+				mpu6050LeerAcelerometro();
+				rollMedido = atan2(accelYRaw, accelZRaw) * (180.0f / M_PI);
+				pitchMedido = atan2(-accelXRaw, sqrt(accelYRaw * accelYRaw + accelZRaw * accelZRaw)) * (180.0f / M_PI);
+				rollMedido -= offsetRoll;
+				pitchMedido -= offsetPitch;
+
+				//transición: modoHoldActivo == 0 -> procesamiento
+				estado = EST_PROCESAMIENTO;
+			}
+			break;
+
+			case EST_PROCESAMIENTO: {
+				//filtro iir
+				rollFiltrado = (0.2f * rollMedido) + (0.8f * rollFiltrado);
+				pitchFiltrado = (0.2f * pitchMedido) + (0.8f * pitchFiltrado);
+
+				//mapeo y nivelación
+				float absRoll = fabs(rollFiltrado);
+				float absPitch = fabs(pitchFiltrado);
+				float rEval = (absRoll < 3.0f) ? 0.0f : rollFiltrado;
+				float pEval = (absPitch < 3.0f) ? 0.0f : pitchFiltrado;
+
+				if (fabs(rEval) < 3.0f && fabs(pEval) < 3.0f) {
+					colorBurbuja = 0;
+					} else if (fabs(rEval) > (fabs(pEval) + 5.0f)) {
+					colorBurbuja = 1;
+					} else if (fabs(pEval) > (fabs(rEval) + 5.0f)) {
+					colorBurbuja = 2;
+					} else {
+					colorBurbuja = 3;
+				}
+
+				int calcX = (int)roundf(((rEval + 30.0f) / 60.0f) * 7.0f);
+				int calcY = (int)roundf(((pEval + 30.0f) / 60.0f) * 7.0f);
+				toqueLimiteActivo = 0;
+
+				if (calcX < 0) { calcX = 0; toqueLimiteActivo = 1; }
+				if (calcX > 7) { calcX = 7; toqueLimiteActivo = 1; }
+				if (calcY < 0) { calcY = 0; toqueLimiteActivo = 1; }
+				if (calcY > 7) { calcY = 7; toqueLimiteActivo = 1; }
+
+				posX = (int8_t)calcX;
+				posY = (int8_t)calcY;
+
+				uart_print("Roll: ");
+				transmitirEntero((int16_t)rollFiltrado);
+				uart_print(" deg | Pitch: ");
+				transmitirEntero((int16_t)pitchFiltrado);
+				uart_print(" deg | Pos: [");
+				transmitirEntero(posX);
+				uart_print(",");
+				transmitirEntero(posY);
+				uart_print("]\r\n");
+
+				//actualizar display / alerta límite
+				limpiarMatriz();
+				int index = posY * 8 + posX;
+
+				if (toqueLimiteActivo) {
+					fijarFrecuenciaMelodia(1000);
+					_delay_ms(30);
+					apagarBuzzers();
+					setLedRGB(index, 255, 255, 255);
+					} else {
+					uint8_t r = 0, g = 0, b = 0;
+					switch (colorBurbuja) {
+						case 0: b = 255; break;
+						case 1: r = 255; break;
+						case 2: g = 255; break;
+						case 3: r = 255; g = 255; break;
+					}
+					setLedRGB(index, r, g, b);
+				}
+
+				show(leds);
+				_delay_ms(40);
+
+				//transición de regreso a lectura sensor
+				estado = EST_LECTURA_SENSOR;
+				break;
+			}
+
+			case EST_MODO_HOLD:
+			//evaluar botón en MODO HOLD
+			if (!(PIND & (1 << PD2))) {
+				if (!btnHoldPresionado) {
+					_delay_ms(20);
+					if (!(PIND & (1 << PD2))) {
+						btnHoldPresionado = 1;
+						modoHoldActivo = 0;
+						uart_print("[MODO HOLD: DESACTIVADO]\r\n");
+					}
+				}
+				} else {
+				btnHoldPresionado = 0;
+			}
+
+			_delay_ms(50);
+			
+			//soltar hold
+			estado = EST_LECTURA_SENSOR;
+			break;
+
+			case EST_CALIBRACION:
+			//guardar eeprom
+			uart_print("Calibrando cero...\r\n");
+			fijarFrecuenciaMelodia(880);
+			_delay_ms(100);
+			apagarBuzzers();
+			mpu6050LeerAcelerometro();
+			float nuevoRoll = atan2(accelYRaw, accelZRaw) * (180.0f / M_PI);
+			float nuevoPitch = atan2(-accelXRaw, sqrt(accelYRaw * accelYRaw + accelZRaw * accelZRaw)) * (180.0f / M_PI);
+			guardarEEPROM(nuevoRoll, nuevoPitch);
+			rollFiltrado = 0.0f;
+			pitchFiltrado = 0.0f;
+			uart_print("Calibracion completada.\r\n");
+			_delay_ms(200);
+
+			//fin calibracion
+			estado = EST_LECTURA_SENSOR;
+			break;
+		}
 	}
 
 	return 0;
