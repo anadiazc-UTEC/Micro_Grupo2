@@ -493,3 +493,112 @@ void modoLibre(uint8_t *cursorX, uint8_t *cursorY, uint8_t *colorCursor) {
 		}
 	}
 }
+
+int main(void) {
+	EstadoSistema estado = EST_INICIALIZACION;
+
+	uint8_t cursorX = 3;
+	uint8_t cursorY = 3;
+	uint8_t colorCursor = 0;
+
+	int coloresSorteados[MAX_RONDAS] = {0};
+	int ronda = 1;
+	uint8_t indiceRespuesta = 0;
+
+	while (1) {
+		switch (estado) {
+
+			case EST_INICIALIZACION:
+				configurarPuertos();
+				adc_init();
+				inicializarMatriz();
+				limpiarMatriz();
+				configurarTimers();
+				uart_init(103);
+				cargarEEPROM();
+
+				uart_print("\r\n--- SIMON DICE ---\r\n");
+				uart_print("Record historico: ");
+				transmitirNumero(recordHistorico);
+				uart_print("\r\n");
+
+				uart_print("Nivel guardado: ");
+				transmitirNumero(nivelGuardado);
+				uart_print("\r\n");
+
+				srand(adc_read(2));
+				estado = EST_MODO_LIBRE;
+				break;
+
+			case EST_MODO_LIBRE:
+				modoLibre(&cursorX, &cursorY, &colorCursor);
+				ronda = 1;
+				indiceRespuesta = 0;
+				estado = EST_GENERAR_SECUENCIA;
+				break;
+
+			case EST_GENERAR_SECUENCIA:
+				if (ronda == 1) {
+					rondaUno();
+				}
+				if (ronda == MAX_RONDAS) {
+					rondaFinal();
+				}
+
+				coloresSorteados[ronda - 1] = decidirColor();
+				guardarProgresoEEPROM(ronda);
+				estado = EST_MOSTRAR_SECUENCIA;
+				break;
+
+			case EST_MOSTRAR_SECUENCIA:
+				for (int i = 0; i < ronda; i++) {
+					prenderColor(coloresSorteados[i]);
+					sonarColor(coloresSorteados[i]);
+					_delay_ms(500);
+					limpiarMatriz();
+					apagarBuzzers();
+					_delay_ms(200);
+				}
+
+				indiceRespuesta = 0;
+				estado = EST_ESPERAR_RESPUESTA;
+				break;
+
+			case EST_ESPERAR_RESPUESTA: {
+				int colorElegido = leerColorUsuario();
+
+				if (colorElegido != coloresSorteados[indiceRespuesta]) {
+					estado = EST_DERROTA;
+				} else {
+					indiceRespuesta++;
+					if (indiceRespuesta >= ronda) {
+						estado = EST_ACIERTO;
+					}
+				}
+				break;
+			}
+
+			case EST_ACIERTO:
+				acertar();
+				if (ronda == MAX_RONDAS) {
+					estado = EST_VICTORIA;
+				} else {
+					ronda++;
+					estado = EST_GENERAR_SECUENCIA;
+				}
+				break;
+
+			case EST_DERROTA:
+				perder();
+				estado = EST_MODO_LIBRE;
+				break;
+
+			case EST_VICTORIA:
+				ganar();
+				estado = EST_MODO_LIBRE;
+				break;
+		}
+	}
+
+	return 0;
+}
