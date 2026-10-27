@@ -10,8 +10,8 @@
 #define DHT11_PIN	PIND3
 #define LDR_PIN		PINC0
 #define POT_PIN		PINC1
-#define LDR_UMBRAL	400
-#define TEMP_UMBRAL	45
+#define LDR_UMBRAL	200
+#define TEMP_UMBRAL	24
 #define MS_PISTON	1000
 #define PCF8574		0x27
 #define ACK_OK		0x06
@@ -32,7 +32,7 @@ static volatile bool boton_presionado = false;
 
 static bool hay_objeto = false;
 static bool ack_error = false;
-
+static uint16_t adc_ldr = 0x0000;
 static uint16_t cant_piezas = 0x0000;
 static uint8_t temp_actual = 0x00;
 static uint8_t pwm_actual = 0x00;
@@ -63,7 +63,7 @@ void external_int0_init(void) {
 }
 
 ISR(INT0_vect) {
-	if (ms_trans - ms_trans_btn > 12) {
+	if (ms_trans - ms_trans_btn > 200 && !(PIND & (1 << BOTON_PIN))) {
 		boton_presionado = true;
 		ms_trans_btn = ms_trans;
 	}
@@ -161,7 +161,7 @@ void LCD_send_string(const char *str, const char *str2) {
 
 void actualizar_lcd(void) {
 	char str[17];
-	snprintf(str, sizeof(str), "P:%02d T:%02dC V:%03d", cant_piezas, temp_actual, pwm_actual);
+	snprintf(str, sizeof(str), "P:%02d T:%02dC M:%03d", cant_piezas, temp_actual, (pwm_actual*100/255));
 	
 	if (ack_error) {
 		LCD_send_string("ERRor: SPI ACK", str);
@@ -172,7 +172,7 @@ void actualizar_lcd(void) {
 	} else if (estado == st_piston) {
 		LCD_send_string("ESTADO: PISTON", str);
 	} else if (estado == st_emergencia) {
-		LCD_send_string("ESTADO: EMERGENCIA", str);
+		LCD_send_string("ESTADO: MAX TEMP", str);
 	}
 }
 
@@ -205,6 +205,8 @@ void spi_transfer(uint8_t comando, uint8_t valor) {
 bool dht11_read(uint8_t *temp) {
 	
 	uint8_t data[5] = {0};
+		uint8_t i, j;
+	uint16_t timeout;
 	
 	DDRD |= (1 << DHT11_PIN);
 	PORTD &= ~(1 << DHT11_PIN);
@@ -213,27 +215,31 @@ bool dht11_read(uint8_t *temp) {
 	_delay_us(30);
 	DDRD &= ~(1 << DHT11_PIN);
 	
-	if (PIND & (1 << DHT11_PIN)) {
-		return true;
-	}
-	
-	while (!(PIND & (1 << DHT11_PIN)));
-	while (PIND & (1 << DHT11_PIN));
+	timeout = 10000;
+	while (PIND & (1 << DHT11_PIN)) if (--timeout == 0) return false;
+	timeout = 10000;
+	while (!(PIND & (1 << DHT11_PIN))) if (--timeout == 0) return false;
+	timeout = 10000;
+	while (PIND & (1 << DHT11_PIN)) if (--timeout == 0) return false;
 
-	for (uint8_t j = 0; j < 40; j++) {
-		while (!(PIND & (1 << DHT11_PIN)));
-		_delay_us(30);
-		if (PIND & (1 << DHT11_PIN)) {
-			data[j / 8] |= (1 << (7 - (j % 8)));
+	for (j = 0; j < 5; j++) {
+		for (i = 0; i < 8; i++) {
+			timeout = 10000;
+			while (!(PIND & (1 << DHT11_PIN))) if (--timeout == 0) return false;
+			_delay_us(30);
+			if (PIND & (1 << DHT11_PIN)) {
+				data[j] |= (1 << (7 - i));
+			}
+			timeout = 10000;
+			while (PIND & (1 << DHT11_PIN)) if (--timeout == 0) return false;
 		}
-		while (PIND & (1 << DHT11_PIN));
 	}
 	
 	if ((data[0] + data[1] + data[2] + data[3]) == data[4]) {
 		*temp = data[2];
-		return false;
+		return true;
 	}
-	return true;
+	return false;
 }
 
 void init_all(void){
@@ -285,7 +291,7 @@ static void st_detectar(void) {
 
 	if (hay_objeto) {
 		cant_piezas++;
-		spi_transfer(CMD_SET_PISTON, 1);
+		spi_transfer(CMD_SET_PISTON, 90);
 		ms_piston_activado = ms_trans;
 		estado = st_piston;
 	}
@@ -319,7 +325,7 @@ int main(void)
 	init_all();
 	
 	uint16_t adc_pot = 0x0000;
-	uint16_t adc_ldr = 0x0000;
+	
 	uint8_t temp_lectura = 0x00;
 	
     while(1)
@@ -328,7 +334,7 @@ int main(void)
 		pwm_nuevo = (adc_pot >> 2);
 		
 		adc_ldr = ADC_read(LDR_PIN);
-		hay_objeto = (adc_ldr >= LDR_UMBRAL);
+		hay_objeto = (adc_ldr <= LDR_UMBRAL);
 		
 		if (dht11_read(&temp_lectura)) {
 			temp_actual = temp_lectura;
