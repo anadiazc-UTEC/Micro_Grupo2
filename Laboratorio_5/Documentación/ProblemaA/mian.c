@@ -6,6 +6,12 @@
  */
 
 #define F_CPU 16000000UL
+
+#define DHT11_PIN PD4
+#define DHT11_PORT PORTD
+#define DHT11_DDR DDRD
+#define DHT11_PINR PIND
+
 #define LED_PIN PB0
 #define BOTON_EMERGENCIA_PIN PD3
 #define BUZZER_PIN PB1
@@ -17,6 +23,8 @@
 #include <stdio.h>
 #define PCF8574 0x27
 
+#include "dht11.h"
+#include "dht11.c"
 #include "twi_lcd.h"
 
 // Variables globales de control de tiempo y eventos
@@ -193,7 +201,7 @@ void procesar_tareas(void) {
 	// Lectura del sensor de temperatura (cada 2 s)
 	if (flag_leer_sensores) {
 		flag_leer_sensores = 0;
-		dht_valido = 0;
+		dht_valido = dht11_read(&humedad, &temperatura);
 	}
 
 	// Actualización del LCD (cada 500 ms)
@@ -384,6 +392,8 @@ int main(void)
 	configurarPuertos();
 
 	// Inicialización de periféricos
+	
+	dht11_init();
 	timer0_ctc_init();
 	timer1_ctc_init();
 	twi_init();
