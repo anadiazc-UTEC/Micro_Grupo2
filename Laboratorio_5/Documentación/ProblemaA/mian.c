@@ -25,7 +25,10 @@
 
 #include "dht11.h"
 #include "dht11.c"
+#include "adc.h"
+#include "adc.c"
 #include "twi_lcd.h"
+
 
 // Variables globales de control de tiempo y eventos
 // SE DECLARAN 'volatile' PORQUE:
@@ -195,7 +198,7 @@ void procesar_tareas(void) {
 	// Lectura del ADC (cada 100 ms)
 	if (flag_adc) {
 		flag_adc = 0;
-		valor_adc = 0;
+		valor_adc = adc_read(0);
 	}
 
 	// Lectura del sensor de temperatura (cada 2 s)
@@ -211,6 +214,7 @@ void procesar_tareas(void) {
 
 		// Actualizar los valores solamente cuando el sistema está ACTIVO
 		if (estado == st_activo) {
+			
 			char buffer[17];
 
 			if (dht_valido) {
@@ -338,6 +342,7 @@ static void st_apagado(void) {
 		twi_lcd_init();
 
 		twi_lcd_linea("EMERGENCIA");
+		
 		estado = st_seguro; // Transición al estado SEGURO
 		return;
 	}
@@ -347,9 +352,11 @@ static void st_apagado(void) {
 
 		reiniciar_inactividad();
 		evento_pulsador = 0;
+		
 		twi_lcd_init();
 		
 		twi_lcd_linea("ACTIVO");
+		
 		estado = st_activo; // Transición al estado ACTIVO
 	}
 }
@@ -392,12 +399,13 @@ int main(void)
 	configurarPuertos();
 
 	// Inicialización de periféricos
-	
+	adc_init();
 	dht11_init();
 	timer0_ctc_init();
 	timer1_ctc_init();
 	twi_init();
 	twi_lcd_init();
+	
 	// Definición del estado inicial
 	estado = st_activo; // Estado inicial: ACTIVO
 
