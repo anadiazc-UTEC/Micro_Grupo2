@@ -17,6 +17,8 @@
 #include <stdio.h>
 #define PCF8574 0x27
 
+#include "twi_lcd.h"
+
 // Variables globales de control de tiempo y eventos
 // SE DECLARAN 'volatile' PORQUE:
 // Se comparten entre el flujo principal y Rutinas de Servicio de Interrupción.
@@ -201,7 +203,16 @@ void procesar_tareas(void) {
 
 		// Actualizar los valores solamente cuando el sistema está ACTIVO
 		if (estado == st_activo) {
-		//imprimir sensores
+			char buffer[17];
+
+			if (dht_valido) {
+				snprintf(buffer, sizeof(buffer), "ADC:%4u T:%2uC", valor_adc, temperatura);
+			}
+			else {
+				snprintf(buffer, sizeof(buffer), "ADC:%4u T:ERROR", valor_adc);
+			}
+
+			twi_lcd_linea(buffer);
 		}
 	}
 
@@ -225,7 +236,9 @@ static void st_activo(void) {
 
 		PORTB &= ~(1 << LED_PIN);
 		estadoLED = 0;
-
+		
+		twi_lcd_linea("EMERGENCIA");
+		
 		estado = st_seguro; // Transición al estado SEGURO
 		return;
 	}
@@ -257,6 +270,8 @@ static void st_activo(void) {
 		PORTB &= ~(1 << LED_PIN);
 		estadoLED = 0;
 		flag_led = 0;
+		
+		twi_lcd_linea("ESPERANDO");
 
 		estado = st_standby; // Transición al estado STANDBY
 	}
@@ -273,6 +288,8 @@ static void st_standby(void) {
 
 	// Transición: Cualquier estado -> Estado seguro (Solicitud de emergencia)
 	if (evento_emergencia) {
+		
+		twi_lcd_linea("EMERGENCIA");
 
 		estado = st_seguro; // Transición al estado SEGURO
 		return;
@@ -283,13 +300,17 @@ static void st_standby(void) {
 
 		reiniciar_inactividad();
 		evento_pulsador = 0;
-
+		
+		twi_lcd_linea("ACTIVO");
+		
 		estado = st_activo; // Transición al estado ACTIVO
 	}
 
 	// Transición: STANDBY a APAGADO (30 segundos sin actividad acumulados desde el último evento)
 	else if (leer_inactividad() >= 30000UL) {
 		
+		twi_lcd_linea("APAGADO");
+		PCF8574_write(0x00);
 		estado = st_apagado; // Transición al estado APAGADO
 	}
 }
@@ -306,6 +327,9 @@ static void st_apagado(void) {
 	// Transición: Cualquier estado -> Estado seguro (Solicitud de emergencia)
 	if (evento_emergencia) {
 		
+		twi_lcd_init();
+
+		twi_lcd_linea("EMERGENCIA");
 		estado = st_seguro; // Transición al estado SEGURO
 		return;
 	}
@@ -315,7 +339,9 @@ static void st_apagado(void) {
 
 		reiniciar_inactividad();
 		evento_pulsador = 0;
-
+		twi_lcd_init();
+		
+		twi_lcd_linea("ACTIVO");
 		estado = st_activo; // Transición al estado ACTIVO
 	}
 }
@@ -343,7 +369,9 @@ static void st_seguro(void) {
 
 		PORTB &= ~(1 << BUZZER_PIN);
 		reiniciar_inactividad();
-
+		
+		twi_lcd_linea("ACTIVO");
+		
 		estado = st_activo; // Transición al estado ACTIVO
 	}
 }
@@ -358,7 +386,8 @@ int main(void)
 	// Inicialización de periféricos
 	timer0_ctc_init();
 	timer1_ctc_init();
-
+	twi_init();
+	twi_lcd_init();
 	// Definición del estado inicial
 	estado = st_activo; // Estado inicial: ACTIVO
 
