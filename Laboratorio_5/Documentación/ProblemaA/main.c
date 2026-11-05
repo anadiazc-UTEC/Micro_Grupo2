@@ -28,6 +28,7 @@
 #include "adc.h"
 #include "adc.c"
 #include "twi_lcd.h"
+#include "twi_lcd.C"
 
 
 // Variables globales de control de tiempo y eventos
