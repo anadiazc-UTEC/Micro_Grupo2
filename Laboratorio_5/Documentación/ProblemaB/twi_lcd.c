@@ -76,23 +76,35 @@ void twi_lcd_clear()
 	twi_lcd_cmd(0x01);
 }
 
+// Enviar un solo nibble con RS = 0 y backlight encendido
+static void twi_lcd_nibble(unsigned char x)
+{
+	lcd = (x & 0xF0) | 0x08;					//--- Datos + backlight, RS = 0, EN = 0
+	PCF8574_write(lcd | 0x04);					//--- EN = 1
+	_delay_us(1);
+	PCF8574_write(lcd);							//--- EN = 0: el LCD toma el nibble
+	_delay_us(50);
+}
+
 /* Function to Initialize LCD in 4-Bit Mode, Cursor Setting and Row Selection */
 void twi_lcd_init()
 {
-	lcd = 0x04;						//--- EN = 1 for 25us initialize Sequence
-	PCF8574_write(lcd);
-	_delay_us(25);
-	twi_lcd_cmd(0x03);				//--- Initialize Sequence
-	twi_lcd_cmd(0x03);				//--- Initialize Sequence
-	twi_lcd_cmd(0x03);				//--- Initialize Sequence
-	twi_lcd_cmd(0x02);				//--- Return to Home
-	twi_lcd_cmd(0x28);				//--- 4-Bit Mode 2 - Row Select
-	twi_lcd_cmd(0x0F);				//--- Cursor on, Blinking on
-	twi_lcd_cmd(0x01);				//--- Clear LCD
-	twi_lcd_cmd(0x06);				//--- Auto increment Cursor
-	twi_lcd_cmd(0x80);				//--- Row 1 Column 1 Address
-	twi_lcd_clear();				//--- Clear LCD
-	twi_lcd_cmd(0x80);				//--- Row 1 Column 1 Address
+	_delay_ms(50);								//--- Espera de encendido (> 40 ms)
+	twi_lcd_nibble(0x30);						//--- Function set (8 bits)
+	_delay_ms(5);								//--- > 4,1 ms
+	twi_lcd_nibble(0x30);						//--- Function set (8 bits)
+	_delay_us(150);								//--- > 100 us
+	twi_lcd_nibble(0x30);						//--- Function set (8 bits)
+	_delay_us(150);
+	twi_lcd_nibble(0x20);						//--- Pasar a modo 4 bits
+	_delay_us(150);
+
+	twi_lcd_cmd(0x28);							//--- 4-Bit Mode 2 - Row Select
+	twi_lcd_cmd(0x0F);							//--- Cursor on, Blinking on
+	twi_lcd_cmd(0x01);							//--- Clear LCD
+	_delay_ms(2);								//--- Clear tarda ~1,52 ms
+	twi_lcd_cmd(0x06);							//--- Auto increment Cursor
+	twi_lcd_cmd(0x80);							//--- Row 1 Column 1 Address
 }
 
 // Actualizar una linea completa del LCD para evitar caracteres anteriores.
